@@ -1,0 +1,306 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Locale {
+  en
+  de
+}
+
+// A permanent startup marker, independent of user accounts and their deletion.
+model BootstrapState {
+  id            Int      @id
+  initializedAt DateTime @default(now())
+
+  @@map("bootstrapState")
+}
+
+// Instance-wide settings managed by administrators, independent of user accounts.
+model SiteSettings {
+  id             Int     @id @default(1)
+  imprintEnabled Boolean @default(false)
+  imprintText    String  @default("")
+  adminContact   String  @default("")
+  instanceName   String  @default("")
+
+  @@map("siteSettings")
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  name                 String
+  email                String                @unique
+  emailVerified        Boolean               @default(false)
+  image                String?
+  username             String?               @unique
+  locale               Locale                @default(en)
+  localeSelected       Boolean               @default(false)
+  role                 Role                  @default(USER)
+  isActive             Boolean               @default(true)
+  mustChangePassword   Boolean               @default(true)
+  isUnusedDefaultAdmin Boolean               @default(false)
+  twoFactorEnabled     Boolean               @default(false)
+  sessions             Session[]
+  accounts             Account[]
+  twoFactor            TwoFactor?
+  gradeLists           GradeList[]
+  subjects             Subject[]
+  gradeTypes           GradeType[]
+  gradeEntries         GradeEntry[]
+  attachments          Attachment[]
+  dashboardPreferences DashboardPreference[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
+
+  @@index([secret])
+  @@map("twoFactor")
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}
+
+enum GradeListStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// Definitions live in lib/grades/systems.ts. Existing versions must not change meaning.
+enum GradingSystemId {
+  de_school_v1
+  school_1_5_v1
+  ascending_1_6_v1
+  upper_secondary_15_v1
+  percent_v1
+  scale_10_v1
+  scale_20_v1
+  grade_points_4_v1
+  us_letters_4_v1
+}
+
+model GradeList {
+  id                    String               @id @default(cuid())
+  userId                String
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                  String
+  description           String?
+  status                GradeListStatus      @default(ACTIVE)
+  gradingSystemId       GradingSystemId
+  useAllGradeTypes      Boolean              @default(true)
+  // A partial unique index in the migration allows one default per user.
+  isDefault             Boolean              @default(false)
+  gradeTypes            GradeListType[]
+  // Set transactionally with the first graded entry in phase 4; never clear on deletion.
+  gradingSystemLockedAt DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  subjects              Subject[]
+  entries               GradeEntry[]
+  dashboardPreference   DashboardPreference?
+
+  @@unique([id, userId])
+  @@index([userId, status])
+  @@map("gradeList")
+}
+
+model Subject {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gradeListId String
+  gradeList   GradeList    @relation(fields: [gradeListId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  name        String
+  color       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  entries     GradeEntry[]
+
+  @@unique([id, gradeListId, userId])
+  @@index([userId, gradeListId])
+  @@map("subject")
+}
+
+model GradeType {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name      String
+  weight    Float
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  entries   GradeEntry[]
+  gradeLists GradeListType[]
+
+  @@unique([id, userId])
+  @@index([userId])
+  @@map("gradeType")
+}
+
+model GradeListType {
+  gradeListId String
+  gradeTypeId String
+  userId      String
+  gradeList   GradeList @relation(fields: [gradeListId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+  gradeType   GradeType @relation(fields: [gradeTypeId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([gradeListId, gradeTypeId, userId])
+  @@index([userId, gradeTypeId])
+  @@map("gradeListType")
+}
+
+model GradeEntry {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gradeListId String
+  gradeList   GradeList    @relation(fields: [gradeListId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  subjectId   String
+  subject     Subject      @relation(fields: [subjectId, gradeListId, userId], references: [id, gradeListId, userId], onDelete: Restrict, onUpdate: Restrict)
+  gradeTypeId String
+  gradeType   GradeType    @relation(fields: [gradeTypeId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  title       String
+  // Calendar date, YYYY-MM-DD; never an implicit UTC/local-time conversion.
+  date        String
+  grade       Float?
+  // First grading time for the current grade; clearing the grade clears this timestamp.
+  gradedAt    DateTime?
+  // Snapshot of GradeType.weight when the entry is created.
+  weight      Float
+  note        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  attachments Attachment[]
+
+  @@unique([id, userId])
+  @@index([userId, date])
+  @@index([userId, gradeListId, date])
+  @@index([userId, subjectId, date])
+  @@index([userId, gradeTypeId])
+  @@index([userId, createdAt])
+  @@index([userId, gradedAt])
+  @@map("gradeEntry")
+}
+
+model Attachment {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gradeEntryId String
+  gradeEntry   GradeEntry @relation(fields: [gradeEntryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  originalName String
+  storageName  String     @unique
+  mimeType     String
+  size         Int
+  createdAt    DateTime   @default(now())
+
+  @@index([userId, gradeEntryId])
+  @@map("attachment")
+}
+
+// The only persisted source for per-list dashboard flags. Create alongside the list.
+model DashboardPreference {
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gradeListId      String
+  gradeList        GradeList @relation(fields: [gradeListId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+  showOnDashboard  Boolean   @default(true)
+  includeInOverall Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@id([gradeListId, userId])
+  @@index([userId])
+  @@map("dashboardPreference")
+}
+
+// Internal filesystem journal, never exposed to clients or scoped by a client ID.
+// UPLOAD tracks an uncommitted file; DELETE tracks a committed metadata deletion.
+enum FileCleanupKind {
+  UPLOAD
+  DELETE
+}
+
+model FileCleanup {
+  storageName String          @id
+  kind        FileCleanupKind
+  createdAt   DateTime        @default(now())
+
+  @@map("fileCleanup")
+}

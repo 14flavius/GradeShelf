@@ -1,0 +1,379 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#edf0f5, #14171c);
+  --foreground: light-dark(#202630, #edf0f4);
+  --card: light-dark(#ffffff, #1e232b);
+  --card-foreground: light-dark(#202630, #edf0f4);
+  --primary: light-dark(#3d5bc2, #a4b8f1);
+  --primary-foreground: light-dark(#ffffff, #18264b);
+  --secondary: light-dark(#e4eaf2, #2a323f);
+  --secondary-foreground: light-dark(#35445e, #d2dbea);
+  --muted: light-dark(#e4e9f0, #282f39);
+  --muted-foreground: light-dark(#505c6d, #adb6c3);
+  --accent: light-dark(#e4eaf2, #2a323f);
+  --destructive: light-dark(#bd2635, #ff929c);
+  --destructive-foreground: light-dark(#ffffff, #351016);
+  --border: light-dark(#d1d8e2, #333b48);
+  --input: light-dark(#b6bfcc, #454e5c);
+  --ring: light-dark(#737983, #b8bec9);
+  --success: light-dark(#15803d, #4ade80);
+  --field: light-dark(#f4f6f9, #242b35);
+  --surface-shadow:
+    0 2px 8px light-dark(rgb(20 30 45 / 0.065), rgb(0 0 0 / 0.1)),
+    0 12px 32px light-dark(rgb(20 30 45 / 0.045), rgb(0 0 0 / 0.08));
+  --floating-shadow: 0 20px 64px light-dark(rgb(20 30 45 / 0.16), rgb(0 0 0 / 0.3));
+  --button-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  --toolbar-shadow: 0 -8px 24px light-dark(rgb(20 35 65 / 0.06), rgb(0 0 0 / 0.08));
+  --radius: 0.5rem;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-field: var(--field);
+  --shadow-surface: var(--surface-shadow);
+  --shadow-floating: var(--floating-shadow);
+  --shadow-button: var(--button-shadow);
+  --shadow-toolbar: var(--toolbar-shadow);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+  button:not(:disabled),
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  input,
+  select,
+  textarea {
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline-width: 1px;
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-4 outline-ring;
+  }
+}
+
+/* Component defaults stay below utilities so each screen can adjust spacing/layout. */
+@layer components {
+  .panel {
+    min-inline-size: 0;
+    border-radius: 1rem;
+    background-color: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--surface-shadow);
+  }
+
+  .grade-button {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium;
+    @apply transition-[background-color,color,box-shadow,opacity,translate,scale] duration-200;
+  }
+  .grade-button[data-variant="default"] {
+    @apply bg-primary text-primary-foreground shadow-button;
+  }
+  .grade-button[data-variant="secondary"] {
+    @apply bg-muted/70 text-foreground;
+  }
+  .grade-button[data-variant="destructive"] {
+    @apply bg-destructive text-destructive-foreground;
+  }
+
+  .grade-input {
+    @apply flex h-11 w-full min-w-0 rounded-xl border border-input bg-field px-3 py-2 text-base;
+  }
+  /* Safari's native date control otherwise imposes its own intrinsic size. */
+  .grade-input[type="date"] {
+    display: block;
+    appearance: none;
+    max-width: 100%;
+    line-height: 1.5rem;
+  }
+  .grade-input[type="date"]::-webkit-date-and-time-value {
+    min-height: 1.5rem;
+    text-align: left;
+  }
+  .grade-input[type="date"]::-webkit-datetime-edit {
+    padding: 0;
+  }
+  @media (width >= 48rem) {
+    .grade-input {
+      @apply text-sm;
+    }
+  }
+}
+
+/* States override plain utilities; explicit hover/disabled utilities still take precedence. */
+@layer utilities {
+  :where(.grade-button):disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  :where(.grade-input):disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  :where(.grade-input)::placeholder {
+    color: var(--muted-foreground);
+  }
+  :where(.grade-input)[aria-invalid="true"] {
+    @apply bg-destructive/10 outline-destructive;
+  }
+  @media (hover: hover) {
+    :where(.grade-button[data-variant="default"], .grade-button[data-variant="destructive"]):hover {
+      opacity: 0.9;
+    }
+    :where(.grade-button[data-variant="secondary"]):hover {
+      background-color: var(--accent);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :where(.grade-button):active {
+      scale: 0.99;
+    }
+  }
+}
+
+.setup-dialog {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Keep scrolled content out of the status-bar area in installed web apps. */
+@media (display-mode: standalone) {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: env(safe-area-inset-top);
+    background: var(--card);
+    z-index: 40;
+    pointer-events: none;
+  }
+  @supports (-webkit-touch-callout: none) {
+    body,
+    .setup-dialog {
+      padding-top: calc(env(safe-area-inset-top) + 0.75rem);
+    }
+    body::before {
+      height: calc(env(safe-area-inset-top) + 0.75rem);
+    }
+  }
+}
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .grade-button,
+  header nav a {
+    min-height: 44px;
+  }
+}
+
+/* Stretch a real link/button across its relative container; keep secondary actions above it. */
+.surface-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+}
+.surface-action:focus-visible {
+  outline: none;
+}
+.surface-action:focus-visible::after {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.surface-action:active {
+  scale: none;
+}
+
+/* Motion is limited to short interactions and never required to read content. */
+@media (prefers-reduced-motion: no-preference) {
+  #main > div,
+  .auth-content {
+    animation: content-in 280ms ease-out;
+  }
+  dialog[open] {
+    animation: dialog-in 200ms ease-out;
+  }
+  dialog[open]::backdrop {
+    animation: fade-in 180ms ease-out;
+  }
+  details[open] > :not(summary) {
+    animation: fade-in 180ms ease-out;
+  }
+  summary svg {
+    transition: rotate 180ms ease;
+  }
+  .interactive-surface {
+    transition:
+      translate 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+  .interactive-row {
+    transition: background-color 180ms ease;
+  }
+  .setup-dialog[open] {
+    animation: fade-in 220ms ease-out;
+  }
+  .setup-step {
+    animation: setup-forward 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .setup-step[data-direction="backward"] {
+    animation-name: setup-backward;
+  }
+  .setup-preview {
+    animation: content-in 360ms ease-out both;
+  }
+  .setup-emblem {
+    animation: setup-emblem-in 450ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .interactive-surface:hover {
+    translate: 0 -1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes setup-forward {
+  from {
+    opacity: 0;
+    translate: 18px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes setup-backward {
+  from {
+    opacity: 0;
+    translate: -18px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes setup-emblem-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+    rotate: -8deg;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    rotate: 0deg;
+  }
+}
+
+/* Inset native select arrows independently of utility padding. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364758b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.85rem center;
+  background-repeat: no-repeat;
+}
+@media (forced-colors: active) {
+  select:not([multiple]):not([size]) {
+    appearance: auto;
+    background-image: none;
+  }
+}

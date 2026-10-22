@@ -1,0 +1,28 @@
+# Dependencies and generated files
+/node_modules/
+/.next/
+/generated/prisma/
+*.tsbuildinfo
+/next-env.d.ts
+
+# Local configuration and credentials
+.env*
+!/.env.example
+
+# Private application data
+/data/
+/backups/
+gradeshelf-export*.zip
+gradeshelf-export*/
+gradeshelf-recovery-codes-*.txt
+*.db
+*.db-*
+
+# Editor, operating-system and log files
+.idea/
+.DS_Store
+*.log
+
+# Local coding-assistant instructions and settings
+AGENTS.md
+.codex/

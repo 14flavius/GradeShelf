@@ -1,0 +1,68 @@
+{
+  "name": "gradeshelf",
+  "version": "1.0.0",
+  "author": {
+    "name": "Flavius Hager",
+    "url": "https://flavius-hager.de"
+  },
+  "homepage": "https://gradeshelf.de",
+  "repository": {
+    "type": "git",
+    "url": "https://github.gradeshelf.de"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "predev": "node scripts/check-config.mts",
+    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev",
+    "build": "npm run db:generate && NEXT_TELEMETRY_DISABLED=1 next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
+    "start": "NEXT_TELEMETRY_DISABLED=1 next start",
+    "prestart": "node scripts/check-config.mts",
+    "lint": "eslint",
+    "format": "prettier --write \"{app,components,lib,scripts}/**/*.{ts,tsx,mts,mjs,css}\" next.config.ts instrumentation.ts prisma.config.ts eslint.config.mjs package.json tsconfig.json",
+    "format:check": "prettier --check \"{app,components,lib,scripts}/**/*.{ts,tsx,mts,mjs,css}\" next.config.ts instrumentation.ts prisma.config.ts eslint.config.mjs package.json tsconfig.json",
+    "admin:create": "node scripts/create-admin.mts",
+    "typecheck": "npm run db:generate && NEXT_TELEMETRY_DISABLED=1 next typegen && tsc --noEmit",
+    "db:generate": "CHECKPOINT_DISABLE=1 prisma generate",
+    "db:validate": "CHECKPOINT_DISABLE=1 prisma validate",
+    "db:init": "node scripts/init-storage.mjs && npm run db:deploy",
+    "db:deploy": "CHECKPOINT_DISABLE=1 prisma migrate deploy",
+    "db:migrate": "CHECKPOINT_DISABLE=1 prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "better-auth": "1.7.10",
+    "better-sqlite3": "12.11.1",
+    "dotenv": "18.0.8",
+    "next": "16.4.2",
+    "prisma": "7.10.1",
+    "qrcode": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "yazl": "3.3.1",
+    "zod": "4.6.7"
+  },
+  "prettier": {
+    "printWidth": 100
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "^20",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/yazl": "3.3.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "prettier": "3.9.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

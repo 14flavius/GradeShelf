@@ -1,0 +1,134 @@
+name: Publish Docker image
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out release
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate release version
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node <<'JS'
+          const fs = require("node:fs");
+          const version = require("./package.json").version;
+          const lock = require("./package-lock.json");
+          if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.RELEASE_TAG !== `v${version}` ||
+              lock.version !== version || lock.packages[""].version !== version) {
+            throw new Error("Release tag and package versions must match.");
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            `version=${version}\nimage=ghcr.io/${process.env.GITHUB_REPOSITORY.toLowerCase()}\n`);
+          JS
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build test image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: gradeshelf:release-test
+
+      - name: Check startup and persistent data
+        env:
+          GRADESHELF_IMAGE: gradeshelf:release-test
+        run: |
+          set -eu
+          sh scripts/setup.sh
+          docker run --rm --entrypoint sh "$GRADESHELF_IMAGE" \
+            -c 'test ! -e /app/.env && test ! -e /data/gradeshelf.db'
+          sh scripts/prepare-data.sh
+          docker compose up -d --pull never --wait --wait-timeout 180
+          container=$(docker compose ps --quiet gradeshelf)
+          mount=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Type}} {{.Source}}{{end}}{{end}}' "$container")
+          test "$mount" = "bind $(pwd)/data"
+          before=$(docker compose exec -T gradeshelf node -e \
+            'const db = new (require("better-sqlite3"))("/data/gradeshelf.db"); console.log(db.prepare("SELECT id FROM user LIMIT 1").get().id); db.close();')
+          docker compose exec -T gradeshelf node -e \
+            'require("node:fs").writeFileSync("/data/uploads/release-check.txt", "persistent");'
+          sh scripts/backup.sh
+          # Remove the container and network, keeping the host data directory.
+          docker compose down
+          docker compose up -d --pull never --wait --wait-timeout 180
+          after=$(docker compose exec -T gradeshelf node -e \
+            'const db = new (require("better-sqlite3"))("/data/gradeshelf.db"); console.log(db.prepare("SELECT id FROM user LIMIT 1").get().id); db.close();')
+          test "$before" = "$after"
+          docker compose exec -T gradeshelf node -e \
+            'if (require("node:fs").readFileSync("/data/uploads/release-check.txt", "utf8") !== "persistent") process.exit(1);'
+
+      - name: Stop test container
+        if: always()
+        env:
+          GRADESHELF_IMAGE: gradeshelf:release-test
+        run: |
+          if [ -f .env ]; then
+            docker compose down
+          fi
+
+      - name: Select image tags
+        id: tags
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ steps.release.outputs.image }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          node <<'JS'
+          const fs = require("node:fs");
+          (async () => {
+            const response = await fetch(`${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}/releases/latest`, {
+              headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: "application/vnd.github+json" }
+            });
+            if (!response.ok) throw new Error("Could not determine the latest GitHub release.");
+            const latest = await response.json();
+            const tags = [`${process.env.IMAGE}:${process.env.VERSION}`];
+            if (latest.tag_name === process.env.RELEASE_TAG) tags.push(`${process.env.IMAGE}:latest`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `tags=${tags.join(",")}\n`);
+          })().catch(() => { console.error("Image tag selection failed."); process.exitCode = 1; });
+          JS
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}

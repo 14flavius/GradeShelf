@@ -1,0 +1,32 @@
+services:
+  gradeshelf:
+    image: ${GRADESHELF_IMAGE:-ghcr.io/14flavius/gradeshelf:latest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    environment:
+      DATA_DIR: /data
+      PORT: "3000"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set a permanent BETTER_AUTH_SECRET in .env first}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      UPLOAD_MAX_FILE_MB: ${UPLOAD_MAX_FILE_MB:-10}
+      UPLOAD_MAX_FILES_PER_ENTRY: ${UPLOAD_MAX_FILES_PER_ENTRY:-10}
+      UPLOAD_MAX_USER_GB: ${UPLOAD_MAX_USER_GB:-0}
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
