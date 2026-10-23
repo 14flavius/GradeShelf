@@ -4,7 +4,7 @@
 <h1 align="center">GradeShelf</h1>
 <p align="center"><strong>A self-hosted grade tracker and exam planner.</strong><br>One place for your grades. Separate accounts for everyone.</p>
 <p align="center">
-  Multi-user · Docker · English &amp; German · v1.0.0
+  Multi-user · Docker · English &amp; German · v1.1.0
 </p>
 <p align="center">
   <a href="#features">Features</a> ·
@@ -171,7 +171,7 @@ docker compose up -d --pull never --wait
 | `PORT` | Published host port; default `3000`. |
 | `BIND_ADDRESS` | Host interface; default `127.0.0.1`. |
 | `COMPOSE_PROJECT_NAME` | Docker instance name. Keep it unchanged after installation. |
-| `GRADESHELF_IMAGE` | Optional image override, e.g. `ghcr.io/14flavius/gradeshelf:1.0.0` to pin a release. Defaults to `latest`. |
+| `GRADESHELF_IMAGE` | Optional image override, e.g. `ghcr.io/14flavius/gradeshelf:1.1.0` to pin a release. Defaults to `latest`. |
 | `DATA_DIR` | Local Node.js development only. Compose always mounts `./data` at `/data`. |
 
 Full configuration: [`.env.example`](.env.example) · [`docker-compose.yml`](docker-compose.yml)
