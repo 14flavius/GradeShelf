@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import { getRequestMessages } from "@/lib/i18n/server";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { BrandIcon } from "@/components/brand-icon";
 
-export async function AuthCard({
+export function AuthCard({
   title,
   description,
   children,
@@ -14,11 +13,10 @@ export async function AuthCard({
   description: string;
   children: ReactNode;
 }) {
-  const t = await getRequestMessages();
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="auth-content w-full max-w-md space-y-7">
-        <div className="space-y-3 text-center">
+        <div className="text-center">
           <Link
             href="/"
             className="inline-flex items-center gap-3 rounded-lg text-2xl font-semibold tracking-tight"
@@ -26,7 +24,6 @@ export async function AuthCard({
             <BrandIcon size={44} />
             GradeShelf
           </Link>
-          <p className="text-sm text-muted-foreground">{t.tagline}</p>
         </div>
         <section
           className="panel space-y-6 overflow-hidden rounded-3xl"
