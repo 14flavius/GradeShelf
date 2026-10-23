@@ -124,6 +124,19 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
         },
       }),
     ]);
+    const calendarFeed = await tx.calendarFeed.findUnique({
+      where: { userId },
+      select: {
+        name: true,
+        enabled: true,
+        locale: true,
+        titleTemplate: true,
+        descriptionTemplate: true,
+        createdAt: true,
+        updatedAt: true,
+        lists: { select: { gradeListId: true }, orderBy: { gradeListId: "asc" } },
+      },
+    });
     const exportedAt = new Date();
     const files = attachments.map((attachment, index) => {
       // Prefixes prevent collisions and reserved filenames. Original names stay in JSON.
@@ -146,6 +159,7 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
         exportedAt,
         profile,
         browserPreferences: { theme },
+        calendarFeed,
         gradingSystems: [...new Set(gradeLists.map((list) => list.gradingSystemId))]
           .sort()
           .map((id) => {

@@ -54,6 +54,7 @@ account or telemetry.
 | --- | --- |
 | **Grade tracking** | Create multiple lists, organize subjects and reuse grade types with custom weights. Archive completed years. |
 | **Weighted averages** | See subject, list and overall averages, plus recent trends. Choose from nine grading scales. |
+| **Calendar subscription** | Subscribe to selected grade lists in Apple Calendar, Outlook or other ICS-compatible calendars. Customize event titles and descriptions. |
 | **Exam planning** | Add an exam now, enter its grade later. Keep upcoming exams and missing results in view. |
 | **Multiple users** | Share one installation with separate accounts and private data. Admins create and manage users. |
 | **Notes & files** | Keep notes and attachments with each entry. Export your data as a ZIP or a readable PDF report. |
@@ -77,6 +78,35 @@ and ten files per entry. Operators can change these limits and set a storage quo
 per user. Downloads require the owning user's login.
 
 </details>
+
+## Calendar subscriptions
+
+Open **Settings → Calendar subscription**, choose your lists, save and enable the
+subscription. Copy the private URL into your calendar app's **Subscribe from URL**
+option. The URL is shown only once; replace it if you lose it. One subscription
+can be used in multiple calendar apps. This is a read-only ICS feed, not CalDAV.
+
+- All entries in the selected lists become all-day events, including past and
+  graded entries. Adding a grade updates the same event. New lists are not included
+  automatically; selected archived lists remain included.
+- Customize the title and description using `{title}`, `{subject}`, `{list}`,
+  `{type}`, `{date}`, `{status}`, `{grade}`, `{weight}`, `{note}` and `{url}`.
+  The preview uses one of your own entries. Notes and grade values are excluded
+  from the default templates. Attachments are never exposed through the feed.
+- The server caches each feed for up to **60 seconds**, regenerating it on the next
+  request. Calendar apps set their own refresh schedule and may take longer.
+  Disabling the feed or replacing its URL revokes the old URL immediately, including
+  cached responses. Replace the URL in your existing subscription, or remove that
+  subscription before adding the new one to avoid duplicate calendar copies. Existing
+  copies in a calendar app cannot be remotely erased.
+- Treat the URL like a password: anyone holding it can read the selected events.
+  Use HTTPS and exclude `/calendar/` URLs from reverse-proxy access/error logs and
+  monitoring. GradeShelf stores only a hash of the token and excludes it from data
+  exports. The calendar app or its provider must be able to reach your instance.
+- Templates allow up to 200 characters for the title and 4,000 for the description;
+  expanded events are limited to 500 and 20,000 characters respectively. The feed
+  is limited to 8 MiB; reduce the list selection if it exceeds that limit. Cached
+  payloads on the server are bounded to 16 MiB. Each subscription allows 60 requests per minute.
 
 ## Installation
 

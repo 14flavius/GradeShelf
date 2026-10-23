@@ -1,4 +1,48 @@
 const en = {
+  calendarTitle: "Calendar subscription",
+  calendarIntro:
+    "Subscribe in Apple Calendar, Outlook or another calendar app using a private ICS URL. Changes in your calendar do not change GradeShelf.",
+  calendarOn: "Subscription enabled",
+  calendarOff: "Subscription disabled",
+  calendarDefaultDescription: "{list}\n{type} · {date}\n\nOpen in GradeShelf: {url}",
+  calendarName: "Calendar name",
+  calendarLists: "Included grade lists",
+  calendarListsHelp:
+    "Include all entries from these lists, including past and graded entries. New lists are not added automatically. An empty selection produces an empty calendar.",
+  calendarNoLists: "Create a grade list first to include its entries.",
+  calendarEventTitle: "Event title",
+  calendarDescription: "Event description",
+  calendarVariables: "Insert a variable",
+  calendarVariablesHelp:
+    "{title} title · {subject} subject · {list} grade list · {type} grade type · {date} date · {status} status · {grade} grade · {weight} weight · {note} note · {url} entry link",
+  calendarLanguage: "Calendar language",
+  calendarPreview: "Preview with an existing entry",
+  calendarNoPreview: "No entries in the selected lists yet.",
+  calendarEnable: "Enable subscription",
+  calendarDisable: "Disable subscription",
+  calendarRotate: "Replace private URL",
+  calendarRotateConfirm:
+    "Replace the URL? Update the URL in your existing calendar subscription, or remove it before subscribing again to avoid duplicate calendars.",
+  calendarDisableConfirm:
+    "Disable the subscription? Existing calendar copies are not deleted. Enabling it again creates a new URL.",
+  calendarConfirm: "Confirm",
+  calendarSecret:
+    "Anyone with this URL can read the included events. Copy it now; it is only shown once. Notes and grades are shared only if you add their variables. Attachments are never shared.",
+  calendarURL: "Private subscription URL",
+  calendarCopy: "Copy URL",
+  calendarCopied: "Copied",
+  calendarSubscribeHelp:
+    "In your calendar app, choose Add subscription / Subscribe from URL and paste this URL. The server cache lasts up to one minute; your calendar app decides when it checks for updates.",
+  calendarSaved: "Calendar settings saved.",
+  calendarSaveFirst: "Save your changes before enabling the subscription or replacing its URL.",
+  calendarError: "Could not update the calendar subscription. Please try again.",
+  calendarInvalid:
+    "Check the name, selected lists and templates. Use only the listed variables in braces.",
+  calendarConflict: "These settings changed in another tab. Reload this page before trying again.",
+  calendarCopyError: "Could not copy. Select the URL and copy it manually.",
+  calendarPreviewLimits:
+    "Preview uses a real entry from your selection. Event titles are limited to 500 characters and descriptions to 20,000 characters.",
+
   wholeGradesOnly: "Whole numbers only",
   halfGradesOnly: "Whole and half grades only",
   savedGrade: "Saved grade",
@@ -556,6 +600,53 @@ type Messages = typeof en;
 export type MessageKey = keyof Messages;
 
 const de: Messages = {
+  calendarTitle: "Kalenderabonnement",
+  calendarIntro:
+    "Abonniere deine Einträge in Apple Kalender, Outlook oder einer anderen Kalender-App über eine private ICS-URL. Änderungen im Kalender verändern GradeShelf nicht.",
+  calendarOn: "Abonnement aktiviert",
+  calendarOff: "Abonnement deaktiviert",
+  calendarDefaultDescription: "{list}\n{type} · {date}\n\nIn GradeShelf öffnen: {url}",
+  calendarName: "Kalendername",
+  calendarLists: "Enthaltene Notenlisten",
+  calendarListsHelp:
+    "Alle Einträge dieser Listen werden übernommen, auch vergangene und benotete. Neue Listen werden nicht automatisch hinzugefügt. Ohne Auswahl bleibt der Kalender leer.",
+  calendarNoLists: "Erstelle zuerst eine Notenliste, um ihre Einträge einzubinden.",
+  calendarEventTitle: "Titel des Termins",
+  calendarDescription: "Beschreibung des Termins",
+  calendarVariables: "Variable einfügen",
+  calendarVariablesHelp:
+    "{title} Titel · {subject} Fach · {list} Notenliste · {type} Notenart · {date} Datum · {status} Status · {grade} Note · {weight} Gewichtung · {note} Notiz · {url} Eintragslink",
+  calendarLanguage: "Kalendersprache",
+  calendarPreview: "Vorschau mit einem vorhandenen Eintrag",
+  calendarNoPreview: "In den ausgewählten Listen gibt es noch keine Einträge.",
+  calendarEnable: "Abonnement aktivieren",
+  calendarDisable: "Abonnement deaktivieren",
+  calendarRotate: "Private URL ersetzen",
+  calendarRotateConfirm:
+    "URL ersetzen? Ändere die URL im bestehenden Kalenderabonnement oder entferne es vor dem erneuten Abonnieren, damit keine doppelten Kalender entstehen.",
+  calendarDisableConfirm:
+    "Abonnement deaktivieren? Bereits gespeicherte Kalenderkopien werden nicht gelöscht. Beim erneuten Aktivieren entsteht eine neue URL.",
+  calendarConfirm: "Bestätigen",
+  calendarSecret:
+    "Jeder mit dieser URL kann die enthaltenen Termine lesen. Kopiere sie jetzt; sie wird nur einmal angezeigt. Notizen und Noten werden nur mit ihren Variablen geteilt. Anhänge werden niemals geteilt.",
+  calendarURL: "Private Abonnement-URL",
+  calendarCopy: "URL kopieren",
+  calendarCopied: "Kopiert",
+  calendarSubscribeHelp:
+    "Wähle in deiner Kalender-App „Kalenderabonnement hinzufügen“ / „Von URL abonnieren“ und füge die URL ein. Der Server-Cache gilt höchstens eine Minute; deine Kalender-App bestimmt, wann sie nach Aktualisierungen sucht.",
+  calendarSaved: "Kalendereinstellungen gespeichert.",
+  calendarSaveFirst:
+    "Speichere deine Änderungen, bevor du das Abonnement aktivierst oder seine URL ersetzt.",
+  calendarError:
+    "Das Kalenderabonnement konnte nicht aktualisiert werden. Bitte versuche es erneut.",
+  calendarInvalid:
+    "Prüfe Name, Listenauswahl und Vorlagen. Verwende in geschweiften Klammern nur die aufgeführten Variablen.",
+  calendarConflict:
+    "Die Einstellungen wurden in einem anderen Tab geändert. Lade die Seite neu, bevor du es erneut versuchst.",
+  calendarCopyError: "Kopieren nicht möglich. Markiere die URL und kopiere sie manuell.",
+  calendarPreviewLimits:
+    "Die Vorschau verwendet einen echten Eintrag deiner Auswahl. Termintitel sind auf 500 Zeichen und Beschreibungen auf 20.000 Zeichen begrenzt.",
+
   wholeGradesOnly: "Nur ganze Zahlen",
   halfGradesOnly: "Nur ganze und halbe Noten",
   savedGrade: "Gespeicherte Note",

@@ -1,3 +1,5 @@
+import { CalendarFeedSettings } from "@/components/settings/calendar-feed";
+import { readCalendarSettings } from "@/lib/calendar/service";
 import { settingsSections } from "@/lib/settings-sections";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/db";
@@ -39,6 +41,7 @@ export default async function SettingsPage() {
       dashboardPreference: { select: { showOnDashboard: true, includeInOverall: true } },
     },
   });
+  const calendar = await readCalendarSettings(db, user.id, user.locale);
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -99,6 +102,7 @@ export default async function SettingsPage() {
       </section>
       <GradeTypes types={types} />
       <DashboardPreferences lists={lists} />
+      <CalendarFeedSettings initial={calendar} lists={lists} />
       <DataExport />
       <section
         id="storage"

@@ -2,6 +2,7 @@
 export const settingsSections = {
   gradeTypes: "grade-types",
   dashboard: "dashboard-preferences",
+  calendar: "calendar",
   dataExport: "data-export",
   security: "security",
 } as const;
