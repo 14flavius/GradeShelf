@@ -4,7 +4,7 @@
 <h1 align="center">GradeShelf</h1>
 <p align="center"><strong>A self-hosted grade tracker and exam planner.</strong><br>One place for your grades. Separate accounts for everyone.</p>
 <p align="center">
-  Multi-user · Docker · English &amp; German · v1.0.0
+  Multi-user · Docker · English &amp; German · v1.1.0
 </p>
 <p align="center">
   <a href="#features">Features</a> ·
@@ -79,35 +79,6 @@ per user. Downloads require the owning user's login.
 
 </details>
 
-## Calendar subscriptions
-
-Open **Settings → Calendar subscription**, choose your lists, save and enable the
-subscription. Copy the private URL into your calendar app's **Subscribe from URL**
-option. The URL is shown only once; replace it if you lose it. One subscription
-can be used in multiple calendar apps. This is a read-only ICS feed, not CalDAV.
-
-- All entries in the selected lists become all-day events, including past and
-  graded entries. Adding a grade updates the same event. New lists are not included
-  automatically; selected archived lists remain included.
-- Customize the title and description using `{title}`, `{subject}`, `{list}`,
-  `{type}`, `{date}`, `{status}`, `{grade}`, `{weight}`, `{note}` and `{url}`.
-  The preview uses one of your own entries. Notes and grade values are excluded
-  from the default templates. Attachments are never exposed through the feed.
-- The server caches each feed for up to **60 seconds**, regenerating it on the next
-  request. Calendar apps set their own refresh schedule and may take longer.
-  Disabling the feed or replacing its URL revokes the old URL immediately, including
-  cached responses. Replace the URL in your existing subscription, or remove that
-  subscription before adding the new one to avoid duplicate calendar copies. Existing
-  copies in a calendar app cannot be remotely erased.
-- Treat the URL like a password: anyone holding it can read the selected events.
-  Use HTTPS and exclude `/calendar/` URLs from reverse-proxy access/error logs and
-  monitoring. GradeShelf stores only a hash of the token and excludes it from data
-  exports. The calendar app or its provider must be able to reach your instance.
-- Templates allow up to 200 characters for the title and 4,000 for the description;
-  expanded events are limited to 500 and 20,000 characters respectively. The feed
-  is limited to 8 MiB; reduce the list selection if it exceeds that limit. Cached
-  payloads on the server are bounded to 16 MiB. Each subscription allows 60 requests per minute.
-
 ## Installation
 
 Requires **Docker with Compose v2**, **curl** and **OpenSSL**. Docker must be running.
@@ -171,7 +142,7 @@ docker compose up -d --pull never --wait
 | `PORT` | Published host port; default `3000`. |
 | `BIND_ADDRESS` | Host interface; default `127.0.0.1`. |
 | `COMPOSE_PROJECT_NAME` | Docker instance name. Keep it unchanged after installation. |
-| `GRADESHELF_IMAGE` | Optional image override, e.g. `ghcr.io/14flavius/gradeshelf:1.0.0` to pin a release. Defaults to `latest`. |
+| `GRADESHELF_IMAGE` | Optional image override, e.g. `ghcr.io/14flavius/gradeshelf:1.1.0` to pin a release. Defaults to `latest`. |
 | `DATA_DIR` | Local Node.js development only. Compose always mounts `./data` at `/data`. |
 
 Full configuration: [`.env.example`](.env.example) · [`docker-compose.yml`](docker-compose.yml)
