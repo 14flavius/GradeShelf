@@ -3,7 +3,7 @@ import { hashPassword } from "better-auth/crypto";
 import { Prisma, type PrismaClient } from "../../generated/prisma/client.ts";
 import { adminCommandSchema, type AdminUserView } from "./commands.ts";
 import { cleanupFiles, ensureStorageReady } from "../attachments/storage.ts";
-import { logEvent } from "../logger.mjs";
+import { logEvent, logRoleChange } from "../logger.mjs";
 import { removeUnusedDefaultAdmin } from "../auth/bootstrap.ts";
 
 type ErrorCode =
@@ -119,8 +119,13 @@ export async function applyAdminCommand(db: PrismaClient, actorId: string, input
       if (command.action === "setUsername" && command.username === target.username) {
         return { id: target.id };
       }
+      if (command.action === "setRole" && command.role === target.role) {
+        return { id: target.id };
+      }
       if (
-        (command.action === "delete" || (command.action === "setActive" && !command.active)) &&
+        (command.action === "delete" ||
+          (command.action === "setActive" && !command.active) ||
+          (command.action === "setRole" && command.role === "USER")) &&
         target.role === "ADMIN" &&
         target.isActive &&
         (await tx.user.count({
@@ -135,6 +140,15 @@ export async function applyAdminCommand(db: PrismaClient, actorId: string, input
       // Re-enabling also invalidates any stale authentication left from an older state.
       await revokeAuthentication(tx, target.id);
       switch (command.action) {
+        case "setRole":
+          await tx.user.update({
+            where: { id: target.id },
+            data: { role: command.role, isUnusedDefaultAdmin: false },
+          });
+          return {
+            id: target.id,
+            roleChange: { fromRole: target.role, toRole: command.role },
+          };
         case "setActive":
           await tx.user.update({ where: { id: target.id }, data: { isActive: command.active } });
           if (command.active && target.role === "ADMIN") {
@@ -206,14 +220,18 @@ export async function applyAdminCommand(db: PrismaClient, actorId: string, input
       resetTwoFactor: "admin.two_factor_reset",
       delete: "admin.user_deleted",
     };
-    logEvent(events[command.action]);
+    if ("roleChange" in result && result.roleChange) {
+      logRoleChange({ actorId, userId: result.id, ...result.roleChange });
+    } else if (command.action !== "setRole") {
+      logEvent(events[command.action]);
+    }
     if (removedDefaultAdmin) {
       logEvent("admin.unused_default_removed");
     }
     if (command.action === "delete") {
       await cleanupFiles(db);
     }
-    return result;
+    return { id: result.id };
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

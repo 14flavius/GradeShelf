@@ -13,6 +13,7 @@ export const adminCommandSchema = z.discriminatedUnion("action", [
     })
     .strict(),
   z.object({ action: z.literal("setActive"), id, active: z.boolean() }).strict(),
+  z.object({ action: z.literal("setRole"), id, role: z.enum(["USER", "ADMIN"]) }).strict(),
   z.object({ action: z.literal("setUsername"), id, username: usernameSchema }).strict(),
   z.object({ action: z.literal("setPassword"), id, password: passwordSchema }).strict(),
   z.object({ action: z.literal("forcePasswordChange"), id }).strict(),

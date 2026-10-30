@@ -99,7 +99,7 @@ export function AdminUsers({
                           }
                         >
                           <span className="sr-only">{t.userRole}: </span>
-                          {user.role}
+                          {user.role === "ADMIN" ? t.roleAdmin : t.roleUser}
                         </span>
                         <span aria-hidden="true">·</span>
                         <span>
@@ -157,9 +157,9 @@ export function AdminUsers({
                         </Button>
                         <Link
                           href={{ pathname: "/settings", hash: settingsSections.security }}
-                          className="inline-flex min-h-10 items-center text-sm text-primary underline underline-offset-4"
+                          className="inline-flex min-h-10 items-center text-sm text-primary"
                         >
-                          {t.settings}
+                          <span className="underline underline-offset-4">{t.settings}</span>
                           <span aria-hidden="true" className="ml-2">
                             →
                           </span>
@@ -172,6 +172,7 @@ export function AdminUsers({
                         {(
                           [
                             "setUsername",
+                            "setRole",
                             "setActive",
                             "setPassword",
                             "forcePasswordChange",
@@ -246,6 +247,8 @@ function actionHelp(selection: Selection): MessageKey {
       return "temporaryPasswordHelp";
     case "setUsername":
       return "renameUserHelp";
+    case "setRole":
+      return "changeRoleHelp";
     case "delete":
       return "deleteUserHelp";
     case "resetTwoFactor":
@@ -321,6 +324,7 @@ function AdminDialog({
           ...(selection.action === "setActive" ? { active: !selection.user.isActive } : {}),
           ...(selection.action === "setPassword" ? { password: form.get("password") } : {}),
           ...(selection.action === "setUsername" ? { username: form.get("username") } : {}),
+          ...(selection.action === "setRole" ? { role: form.get("role") } : {}),
           ...(selection.action === "delete" ? { confirmation: form.get("confirmation") } : {}),
         };
     const parsed = adminCommandSchema.safeParse(command);
@@ -401,15 +405,18 @@ function AdminDialog({
               </p>
             </>
           )}
-          {creating && (
-            <>
-              <FormField label={t.userRole}>
-                <select name="role" className={controlClass} defaultValue="USER">
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
-              </FormField>
-            </>
+          {(creating || selection.action === "setRole") && (
+            <FormField label={t.userRole}>
+              <select
+                name="role"
+                className={controlClass}
+                defaultValue={creating ? "USER" : selection.user.role}
+                data-autofocus={selection.action === "setRole" || undefined}
+              >
+                <option value="USER">{t.roleUser}</option>
+                <option value="ADMIN">{t.roleAdmin}</option>
+              </select>
+            </FormField>
           )}
           {passwordNeeded && (
             <>
@@ -483,7 +490,9 @@ function AdminDialog({
           <Button
             variant="secondary"
             disabled={pending}
-            data-autofocus={(!passwordNeeded && !usernameNeeded) || undefined}
+            data-autofocus={
+              (!passwordNeeded && !usernameNeeded && selection.action !== "setRole") || undefined
+            }
             onClick={onClose}
           >
             {t.cancel}

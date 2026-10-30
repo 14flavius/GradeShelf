@@ -123,6 +123,12 @@ The tutorial helps you create your first list, subjects and grade types.
 
 Add users in **Admin**. There is no public registration or email password reset.
 Admins can reset passwords and 2FA, but cannot view another user's grades or files.
+Open another account and select **Change role** to switch between User and
+Administrator. Your own role cannot be changed. A role change ends the affected
+user's sessions; their grades, files and SSO connection are retained.
+Successful changes appear as `admin.role_changed` in `docker compose logs`, with
+the acting administrator's ID, the affected account ID and the old and new roles.
+
 To create an additional administrator from the terminal:
 
 ```sh

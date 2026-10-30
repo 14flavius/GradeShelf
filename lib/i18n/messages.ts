@@ -326,10 +326,15 @@ const en = {
   usernameTaken: "This username is already in use.",
   usernameAvailable: "This username is available.",
   setUsername: "Change username",
+  setRole: "Change role",
+  roleUser: "User",
+  roleAdmin: "Administrator",
+  changeRoleHelp:
+    "Choose whether this account can manage users and instance settings. Grades and files remain private and unchanged. You cannot change your own role.",
   renameUserHelp: "Use the new username for future sign-ins. A custom display name is kept.",
   adminSelfAction:
     "This action is not allowed on your own account. Manage your password and 2FA in Settings.",
-  lastAdmin: "The last active administrator cannot be removed or deactivated.",
+  lastAdmin: "The last active administrator cannot be removed, deactivated or demoted.",
   adminNotFound: "This account no longer exists. Refresh the page.",
   adminConfirmation: "Enter the displayed username exactly to confirm deletion.",
   adminSecurityHelp:
@@ -991,11 +996,17 @@ const de: Messages = {
   usernameTaken: "Dieser Benutzername wird bereits verwendet.",
   usernameAvailable: "Dieser Benutzername ist verfügbar.",
   setUsername: "Benutzernamen ändern",
+  setRole: "Rolle ändern",
+  roleUser: "Benutzer",
+  roleAdmin: "Administrator",
+  changeRoleHelp:
+    "Wähle, ob dieser Account Benutzer und Instanzeinstellungen verwalten darf. Noten und Dateien bleiben privat und unverändert. Deine eigene Rolle kannst du nicht ändern.",
   renameUserHelp:
     "Verwende bei zukünftigen Anmeldungen den neuen Benutzernamen. Ein eigener Anzeigename bleibt erhalten.",
   adminSelfAction:
     "Diese Aktion ist für deinen eigenen Account gesperrt. Verwalte dein Passwort und 2FA unter Einstellungen.",
-  lastAdmin: "Der letzte aktive Administrator kann nicht gelöscht oder deaktiviert werden.",
+  lastAdmin:
+    "Der letzte aktive Administrator kann nicht gelöscht, deaktiviert oder zum Benutzer herabgestuft werden.",
   adminNotFound: "Dieser Account existiert nicht mehr. Lade die Seite neu.",
   adminConfirmation: "Gib den angezeigten Benutzernamen exakt ein, um die Löschung zu bestätigen.",
   adminSecurityHelp:
