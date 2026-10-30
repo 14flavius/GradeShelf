@@ -1,5 +1,8 @@
-// Only private entry paths are accepted; no external URLs or arbitrary redirects.
+// Only explicit local destinations are accepted, including SSO reauthentication.
 export function entryReturnPath(value: unknown): string {
+  if (value === "/settings#sso-settings") {
+    return value;
+  }
   return typeof value === "string" && /^\/entries\/[A-Za-z0-9_-]{1,128}$/.test(value)
     ? value
     : "/dashboard";

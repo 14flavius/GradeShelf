@@ -1,6 +1,6 @@
 // Enforce limits on bytes actually received, including requests without Content-Length.
 // null means too large; stream failures propagate to the route's error handler.
-export async function readRequestBody(request: Request, maxBytes: number) {
+export async function readRequestBody(request: Pick<Request, "body">, maxBytes: number) {
   const reader = request.body?.getReader();
   if (!reader) {
     return Buffer.alloc(0);

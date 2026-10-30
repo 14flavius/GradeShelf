@@ -13,14 +13,35 @@ import { AdminContact } from "./admin-contact";
 export function LoginForm({
   returnTo = "/dashboard",
   adminContact,
+  ssoEnabled = false,
+  initialError,
 }: {
   returnTo?: string;
   adminContact: string;
+  ssoEnabled?: boolean;
+  initialError?: MessageKey;
 }) {
   const { t } = useLanguage();
   const router = useRouter();
-  const [error, setError] = useState<MessageKey | "">("");
+  const [error, setError] = useState<MessageKey | "">(initialError ?? "");
   const [pending, setPending] = useState(false);
+  async function signInWithSso() {
+    setPending(true);
+    setError("");
+    try {
+      const result = await authClient.signIn.social({
+        provider: "oidc",
+        callbackURL: entryReturnPath(returnTo),
+      });
+      if (result.error) {
+        setError(authErrorMessage(result.error, "ssoFailed"));
+      }
+    } catch {
+      setError("connectionFailed");
+    } finally {
+      setPending(false);
+    }
+  }
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
@@ -48,7 +69,7 @@ export function LoginForm({
     }
   }
   return (
-    <form onSubmit={submit} className="space-y-5" aria-busy={pending}>
+    <form method="post" onSubmit={submit} className="space-y-5" aria-busy={pending}>
       <Field
         id="username"
         name="username"
@@ -76,6 +97,16 @@ export function LoginForm({
       <Button type="submit" className="min-h-12 w-full rounded-lg" disabled={pending}>
         {pending ? t.signingIn : t.signIn}
       </Button>
+      {ssoEnabled && (
+        <Button
+          variant="secondary"
+          className="min-h-12 w-full rounded-lg"
+          disabled={pending}
+          onClick={signInWithSso}
+        >
+          {t.ssoTitle}
+        </Button>
+      )}
       <AdminContact contact={adminContact} />
     </form>
   );

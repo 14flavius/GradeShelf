@@ -1,13 +1,33 @@
 import { getAuthEnvironment } from "./environment.ts";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+  isAPIError,
+  addOAuthServerContext,
+  getOAuthState,
+} from "better-auth/api";
 import { twoFactor, username } from "better-auth/plugins";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { logEvent } from "../logger.mjs";
 import { authBodies, exposedAuthPaths, usernameSchema } from "./validation.ts";
+import { entryReturnPath } from "./return-path.ts";
+import { hasFreshLocalSession, ssoAccountKey, ssoProviderId } from "./sso-validation.ts";
+import type { SsoConfiguration } from "./sso.ts";
+import { ssoProvider } from "./sso-provider.ts";
 
-export function createAuth(db: PrismaClient) {
+const discardedSsoTokens = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+  scope: null,
+};
+
+export function createAuth(db: PrismaClient, sso?: SsoConfiguration) {
   const environment = getAuthEnvironment();
   return betterAuth({
     appName: "GradeShelf",
@@ -17,6 +37,7 @@ export function createAuth(db: PrismaClient) {
     telemetry: { enabled: false },
     logger: { level: "error", log: () => logEvent("auth.internal_error", "error") },
     onAPIError: {
+      errorURL: `${environment.baseURL}/login?sso=error`,
       onError: (error) => {
         if (!isAPIError(error) || error.statusCode >= 500) {
           logEvent("auth.internal_error", "error");
@@ -29,8 +50,88 @@ export function createAuth(db: PrismaClient) {
       minPasswordLength: 12,
       maxPasswordLength: 128,
     },
-    session: { expiresIn: 60 * 60 * 24 * 7, cookieCache: { enabled: false } },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      cookieCache: { enabled: false },
+      additionalFields: {
+        ssoAccountId: { type: "string", required: false, input: false },
+        ssoRevision: { type: "number", required: false, input: false },
+      },
+    },
+    account: {
+      encryptOAuthTokens: true,
+      accountLinking: {
+        enabled: true,
+        disableImplicitLinking: true,
+        allowDifferentEmails: true,
+        trustedProviders: sso ? [ssoProviderId] : [],
+      },
+    },
     user: {
+      validateUserInfo: async ({ user, source }, ctx) => {
+        if (source.method !== "oauth") {
+          return;
+        }
+        if (!sso || source.oauth?.providerId !== ssoProviderId || source.action === "create-user") {
+          return { error: "SSO_NOT_LINKED" };
+        }
+        const state = await getOAuthState();
+        const settings = await db.ssoSettings.findUnique({ where: { id: 1 } });
+        if (
+          !settings?.enabled ||
+          settings.revision !== sso.revision ||
+          state?.serverContext?.ssoRevision !== sso.revision
+        ) {
+          return { error: "SSO_CONFIGURATION_CHANGED" };
+        }
+        const owner =
+          typeof user.id === "string"
+            ? await db.user.findFirst({
+                where: { id: user.id, isActive: true, mustChangePassword: false },
+              })
+            : null;
+        if (!owner) {
+          return { error: "SSO_NOT_AVAILABLE" };
+        }
+        if (source.action === "link-account") {
+          const session = await getSessionFromCtx(ctx, {
+            disableCookieCache: true,
+            disableRefresh: true,
+          });
+          if (
+            !session ||
+            session.user.id !== owner.id ||
+            session.session.id !== state?.serverContext?.ssoSessionId ||
+            !hasFreshLocalSession(session.session)
+          ) {
+            return { error: "SSO_REAUTH_REQUIRED" };
+          }
+          if (
+            await db.account.findFirst({ where: { userId: owner.id, providerId: ssoProviderId } })
+          ) {
+            return { error: "SSO_ALREADY_LINKED" };
+          }
+        } else {
+          const subject = source.oauth.profile?.sub;
+          const account =
+            typeof subject === "string"
+              ? await db.account.findFirst({
+                  where: {
+                    userId: owner.id,
+                    providerId: ssoProviderId,
+                    accountId: ssoAccountKey(sso.issuer, sso.clientId, subject),
+                  },
+                  select: { id: true },
+                })
+              : null;
+          if (!account || !state?.serverContext) {
+            return { error: "SSO_NOT_LINKED" };
+          }
+          // Request-local proof from the verified profile, never client input.
+          // The session hook binds the session to this exact account row.
+          state.serverContext.verifiedSsoAccountId = account.id;
+        }
+      },
       additionalFields: {
         locale: { type: ["en", "de"], defaultValue: "en", input: false },
         role: { type: ["USER", "ADMIN"], defaultValue: "USER", input: false },
@@ -60,9 +161,13 @@ export function createAuth(db: PrismaClient) {
         "/sign-in/username": { window: 60, max: 10 },
         "/change-password": { window: 60, max: 5 },
         "/two-factor/*": { window: 60, max: 10 },
+        "/sign-in/social": { window: 60, max: 10 },
+        "/link-social": { window: 60, max: 5 },
+        "/unlink-account": { window: 60, max: 5 },
       },
     },
     plugins: [
+      ...(sso ? [ssoProvider(sso)] : []),
       username({
         displayUsername: false,
         immutableUsername: true,
@@ -77,6 +182,28 @@ export function createAuth(db: PrismaClient) {
       }),
     ],
     databaseHooks: {
+      account: {
+        create: {
+          before: async (account) =>
+            account.providerId === ssoProviderId
+              ? { data: { ...account, ...discardedSsoTokens } }
+              : undefined,
+        },
+        update: {
+          before: async (account) =>
+            account.providerId === ssoProviderId
+              ? { data: { ...account, ...discardedSsoTokens } }
+              : undefined,
+        },
+        delete: {
+          after: async (account) => {
+            if (account.providerId === ssoProviderId) {
+              // The foreign key deletes associated SSO sessions atomically.
+              logEvent("auth.sso_unlinked");
+            }
+          },
+        },
+      },
       session: {
         create: {
           before: async (session, context) => {
@@ -89,6 +216,49 @@ export function createAuth(db: PrismaClient) {
             if ("isUnusedDefaultAdmin" in user && user.isUnusedDefaultAdmin === true) {
               await adapter.updateUser(session.userId, { isUnusedDefaultAdmin: false });
             }
+            if (context?.path === "/callback/:id" || context?.path === "/callback/oidc") {
+              const settings = await db.ssoSettings.findUnique({ where: { id: 1 } });
+              const accountId = (await getOAuthState())?.serverContext?.verifiedSsoAccountId;
+              if (
+                !sso ||
+                !settings?.enabled ||
+                settings.revision !== sso.revision ||
+                !("mustChangePassword" in user) ||
+                user.mustChangePassword ||
+                typeof accountId !== "string"
+              ) {
+                throw new APIError("UNAUTHORIZED", { code: "SSO_NOT_AVAILABLE" });
+              }
+              const account = await db.account.findFirst({
+                where: {
+                  id: accountId,
+                  userId: session.userId,
+                  providerId: ssoProviderId,
+                },
+              });
+              if (!account) {
+                throw new APIError("UNAUTHORIZED", { code: "SSO_NOT_AVAILABLE" });
+              }
+              return { data: { ...session, ssoAccountId: account.id, ssoRevision: sso.revision } };
+            }
+            const previous = context?.context.session?.session;
+            if (
+              previous?.userId === session.userId &&
+              (context?.path === "/change-password" || context?.path?.startsWith("/two-factor/"))
+            ) {
+              // Rotating a session is not a fresh local login. Preserve its
+              // source and authentication age when passwords or 2FA change.
+              return {
+                data: {
+                  ...session,
+                  createdAt: previous.createdAt,
+                  ssoAccountId:
+                    typeof previous.ssoAccountId === "string" ? previous.ssoAccountId : null,
+                  ssoRevision:
+                    typeof previous.ssoRevision === "number" ? previous.ssoRevision : null,
+                },
+              };
+            }
           },
         },
       },
@@ -99,7 +269,8 @@ export function createAuth(db: PrismaClient) {
           return;
         }
         // Server-only endpoints have no public path; the HTTP handler also uses this allowlist.
-        if (ctx.path && !exposedAuthPaths.has(ctx.path)) {
+        const callback = ctx.path === "/callback/:id" && ctx.params?.id === ssoProviderId;
+        if (ctx.path && !exposedAuthPaths.has(ctx.path) && !callback) {
           throw new APIError("NOT_FOUND");
         }
         if (ctx.path && Object.hasOwn(authBodies, ctx.path)) {
@@ -116,11 +287,26 @@ export function createAuth(db: PrismaClient) {
         if (ctx.path === "/sign-in/username") {
           return { context: { ...ctx, body: ctx.body } };
         }
+        if (ctx.path === "/sign-in/social" || ctx.path === "/link-social" || callback) {
+          if (!sso) {
+            throw new APIError("NOT_FOUND");
+          }
+          const settings = await db.ssoSettings.findUnique({ where: { id: 1 } });
+          if (!settings?.enabled || settings.revision !== sso.revision) {
+            throw new APIError("FORBIDDEN", { code: "SSO_CONFIGURATION_CHANGED" });
+          }
+        }
         const session = await getSessionFromCtx(ctx, {
           disableCookieCache: true,
           disableRefresh: true,
         });
         if (session && ctx.path !== "/sign-out") {
+          if (session.session.ssoAccountId) {
+            const settings = await db.ssoSettings.findUnique({ where: { id: 1 } });
+            if (!settings?.enabled || settings.revision !== session.session.ssoRevision) {
+              throw new APIError("UNAUTHORIZED", { code: "SSO_NOT_AVAILABLE" });
+            }
+          }
           const user = await db.user.findUnique({ where: { id: session.user.id } });
           if (!user?.isActive) {
             throw new APIError("UNAUTHORIZED", { message: "Anmeldung nicht möglich." });
@@ -141,6 +327,37 @@ export function createAuth(db: PrismaClient) {
         }
         if (ctx.path === "/change-password") {
           ctx.body.revokeOtherSessions = true;
+        }
+        if (ctx.path === "/link-social" || ctx.path === "/unlink-account") {
+          if (!session || !hasFreshLocalSession(session.session)) {
+            throw new APIError("FORBIDDEN", { code: "SSO_REAUTH_REQUIRED" });
+          }
+          if (ctx.path === "/unlink-account") {
+            const account = await db.account.findFirst({
+              where: { id: ctx.body.accountId, userId: session.user.id, providerId: ssoProviderId },
+            });
+            if (!account) {
+              throw new APIError("NOT_FOUND");
+            }
+          } else {
+            if (
+              await db.account.findFirst({
+                where: { userId: session.user.id, providerId: ssoProviderId },
+              })
+            ) {
+              throw new APIError("CONFLICT", { code: "SSO_ALREADY_LINKED" });
+            }
+            ctx.body.callbackURL = "/settings?sso=linked#sso-settings";
+            ctx.body.errorCallbackURL = "/settings?sso=error#sso-settings";
+            await addOAuthServerContext({ ssoSessionId: session.session.id });
+          }
+        }
+        if (ctx.path === "/sign-in/social") {
+          ctx.body.callbackURL = entryReturnPath(ctx.body.callbackURL);
+          ctx.body.errorCallbackURL = "/login?sso=error";
+        }
+        if (ctx.path === "/sign-in/social" || ctx.path === "/link-social") {
+          await addOAuthServerContext({ ssoRevision: sso?.revision });
         }
         return { context: { ...ctx, body: ctx.body } };
       }),

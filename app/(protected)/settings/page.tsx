@@ -17,15 +17,35 @@ import { SetupTutorial } from "@/components/onboarding/setup-tutorial";
 import { InstallApp } from "@/components/install-app";
 import { DataExport } from "@/components/settings/data-export";
 import { StorageUsage } from "@/components/attachments/storage-usage";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth/server";
+import { hasFreshLocalSession, ssoProviderId, ssoResultMessage } from "@/lib/auth/sso-validation";
+import { SsoAccountSettings } from "@/components/auth/sso-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestMessages()).settings };
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sso?: string }>;
+}) {
   const t = await getRequestMessages();
   const user = await requireUser();
   const db = await getDb();
+  const [sso, ssoAccount, session, params] = await Promise.all([
+    db.ssoSettings.findUnique({ where: { id: 1 }, select: { enabled: true } }),
+    db.account.findFirst({
+      where: { userId: user.id, providerId: ssoProviderId },
+      select: { id: true },
+    }),
+    (await getAuth()).api.getSession({
+      headers: await headers(),
+      query: { disableCookieCache: true, disableRefresh: true },
+    }),
+    searchParams,
+  ]);
   const types = await db.gradeType.findMany({
     where: { userId: user.id },
     orderBy: { name: "asc" },
@@ -98,6 +118,14 @@ export default async function SettingsPage() {
             enabled={user.twoFactorEnabled}
             username={user.username ?? "GradeShelf"}
           />
+          {(sso?.enabled || ssoAccount || params.sso) && (
+            <SsoAccountSettings
+              enabled={sso?.enabled ?? false}
+              accountId={ssoAccount?.id ?? null}
+              canManage={Boolean(session && hasFreshLocalSession(session.session))}
+              initialError={ssoResultMessage(params.sso)}
+            />
+          )}
         </div>
       </section>
       <GradeTypes types={types} />

@@ -30,7 +30,7 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=node:node /app/lib/storage-config.mjs /app/lib/logger.mjs ./lib/
 COPY --from=builder --chown=node:node /app/lib/database.ts ./lib/database.ts
-COPY --from=builder --chown=node:node /app/lib/auth/bootstrap.ts /app/lib/auth/validation.ts /app/lib/auth/environment.ts ./lib/auth/
+COPY --from=builder --chown=node:node /app/lib/auth/bootstrap.ts /app/lib/auth/validation.ts /app/lib/auth/sso-validation.ts /app/lib/auth/environment.ts ./lib/auth/
 COPY --from=builder --chown=node:node /app/lib/attachments/config.ts /app/lib/attachments/rules.ts ./lib/attachments/
 COPY --from=builder --chown=node:node /app/generated/prisma ./generated/prisma
 COPY --from=builder --chown=node:node /app/scripts/init-storage.mjs ./scripts/init-storage.mjs

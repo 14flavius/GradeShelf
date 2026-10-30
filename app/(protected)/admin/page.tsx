@@ -10,6 +10,9 @@ import { ImprintSettingsForm } from "@/components/admin/imprint-settings";
 import { readImprint } from "@/lib/admin/imprint";
 import { readAdminContact } from "@/lib/admin/contact";
 import { ContactSettings } from "@/components/admin/contact-settings";
+import { SettingsPanel } from "@/components/settings/settings-panel";
+import { SsoSettings } from "@/components/admin/sso-settings";
+import { readSsoSettings } from "@/lib/auth/sso";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getRequestMessages()).admin };
@@ -18,12 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AdminPage() {
   const user = await requireUser({ admin: true });
   const db = await getDb();
-  const [users, settings, contact, instanceName, t] = await Promise.all([
+  const [users, settings, contact, instanceName, t, sso] = await Promise.all([
     listAdminUsers(db, user.id),
     readImprint(db),
     readAdminContact(db),
     readInstanceName(db),
     getRequestMessages(),
+    readSsoSettings(db),
   ]);
   return (
     <AdminUsers users={users} currentUserId={user.id}>
@@ -75,6 +79,9 @@ export default async function AdminPage() {
           <ImprintSettingsForm settings={settings} />
         </div>
       </details>
+      <SettingsPanel id="advanced-settings" title={t.advancedFeatures} status={t.ssoTitle}>
+        <SsoSettings initial={sso} />
+      </SettingsPanel>
     </AdminUsers>
   );
 }

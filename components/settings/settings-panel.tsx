@@ -4,16 +4,19 @@ export function SettingsPanel({
   id,
   title,
   status,
+  open,
   children,
 }: {
   id: string;
   title: string;
   status?: string;
+  open?: boolean;
   children: ReactNode;
 }) {
   return (
     <details
       id={id}
+      open={open}
       className="group min-w-0 rounded-2xl bg-card text-card-foreground shadow-surface"
     >
       <summary className="flex min-h-20 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-5 py-4 hover:bg-accent/40 [&::-webkit-details-marker]:hidden">

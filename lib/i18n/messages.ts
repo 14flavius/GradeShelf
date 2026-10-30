@@ -1,4 +1,52 @@
 const en = {
+  advancedFeatures: "Advanced features",
+  ssoTitle: "SSO login",
+  ssoAdminHelp:
+    "Connect one OpenID Connect (OIDC) provider. Users link SSO to their existing GradeShelf account. Local sign-in remains available.",
+  ssoEnable: "Enable SSO login",
+  ssoIssuer: "Issuer URL",
+  ssoClientId: "Client ID",
+  ssoClientSecret: "Client secret",
+  ssoSecretHelp: "Enter the client secret issued by your provider. It is stored encrypted.",
+  ssoSecretStored:
+    "A secret is stored. Leave empty to keep it, or enter a replacement. Changing the issuer or client ID requires a new secret.",
+  ssoCallback: "Callback URL",
+  ssoCopy: "Copy URL",
+  ssoCopied: "Callback URL copied.",
+  ssoCopyFailed: "Could not copy automatically. Select the URL and copy it manually.",
+  ssoChangesHelp:
+    "Saving ends existing SSO sessions. After changing the issuer or client ID, users must remove their old SSO connection and connect again. Keep a local administrator account with 2FA available.",
+  ssoCheck: "Check configuration",
+  ssoCheckPassed:
+    "OIDC metadata is reachable and compatible. Client credentials and the full login are checked when connecting an account.",
+  ssoSaved: "SSO settings saved.",
+  ssoInvalid:
+    "Check the issuer URL and client ID. Use HTTPS and an issuer URL without query parameters or a fragment.",
+  ssoDiscoveryFailed:
+    "Could not verify the OIDC configuration. Check the exact issuer URL, server connectivity, certificates and support for Authorization Code with PKCE (S256).",
+  ssoSecretRequired: "Enter a client secret for this issuer and client ID.",
+  ssoConflict: "SSO settings changed in another tab. Reload this page before trying again.",
+  ssoFailed: "SSO could not be completed. Try again or sign in with your username and password.",
+  ssoNotLinked:
+    "This SSO identity is not connected to a GradeShelf account. Sign in locally and connect it in Settings → Security.",
+  ssoAccountHelp:
+    "Connect your SSO identity to this account to keep using your existing grades. Removing the connection also ends your SSO sessions. Your local login remains available.",
+  ssoMfaHelp:
+    "SSO uses your provider’s two-factor authentication. GradeShelf’s local 2FA applies to password sign-in. Signing out here only ends your GradeShelf session.",
+  ssoConnected: "Connected",
+  ssoDisconnected: "Not connected",
+  ssoDisabled:
+    "SSO login is disabled by the administrator. You can still remove an existing connection.",
+  ssoReauthRequired:
+    "To connect or remove SSO, sign in again with your local username, password and, if enabled, 2FA. This confirmation is valid for five minutes.",
+  ssoReauthenticate: "Confirm local sign-in",
+  ssoConnect: "Connect SSO",
+  ssoDisconnect: "Remove SSO connection",
+  ssoWorking: "Please wait…",
+  ssoRemoved: "SSO connection removed.",
+  ssoAlreadyLinked:
+    "This account already has an SSO connection. Remove it before connecting another identity.",
+
   calendarTitle: "Calendar subscription",
   calendarIntro:
     "Subscribe in Apple Calendar, Outlook or another calendar app using a private ICS URL. Changes in your calendar do not change GradeShelf.",
@@ -600,6 +648,58 @@ type Messages = typeof en;
 export type MessageKey = keyof Messages;
 
 const de: Messages = {
+  advancedFeatures: "Erweiterte Funktionen",
+  ssoTitle: "SSO-Login",
+  ssoAdminHelp:
+    "Einen OpenID-Connect-Anbieter (OIDC) verbinden. Benutzer verknüpfen SSO mit ihrem bestehenden GradeShelf-Konto. Die lokale Anmeldung bleibt verfügbar.",
+  ssoEnable: "SSO-Login aktivieren",
+  ssoIssuer: "Issuer-URL",
+  ssoClientId: "Client-ID",
+  ssoClientSecret: "Client-Secret",
+  ssoSecretHelp:
+    "Das vom Anbieter ausgestellte Client-Secret eingeben. Es wird verschlüsselt gespeichert.",
+  ssoSecretStored:
+    "Ein Secret ist hinterlegt. Leer lassen, um es beizubehalten, oder einen Ersatz eingeben. Eine andere Issuer-URL oder Client-ID erfordert ein neues Secret.",
+  ssoCallback: "Callback-URL",
+  ssoCopy: "URL kopieren",
+  ssoCopied: "Callback-URL kopiert.",
+  ssoCopyFailed:
+    "Automatisches Kopieren ist nicht verfügbar. Die URL markieren und manuell kopieren.",
+  ssoChangesHelp:
+    "Speichern beendet bestehende SSO-Sitzungen. Nach einem Wechsel der Issuer-URL oder Client-ID müssen Benutzer ihre alte SSO-Verbindung entfernen und neu verbinden. Einen lokalen Adminzugang mit 2FA bereithalten.",
+  ssoCheck: "Konfiguration prüfen",
+  ssoCheckPassed:
+    "Die OIDC-Metadaten sind erreichbar und kompatibel. Zugangsdaten und vollständiger Login werden beim Verbinden eines Kontos geprüft.",
+  ssoSaved: "SSO-Einstellungen gespeichert.",
+  ssoInvalid:
+    "Issuer-URL und Client-ID prüfen. HTTPS und eine Issuer-URL ohne Abfrageparameter oder Fragment verwenden.",
+  ssoDiscoveryFailed:
+    "Die OIDC-Konfiguration konnte nicht geprüft werden. Exakte Issuer-URL, Erreichbarkeit vom Server, Zertifikate und Unterstützung für Authorization Code mit PKCE (S256) prüfen.",
+  ssoSecretRequired: "Ein Client-Secret für diese Issuer-URL und Client-ID eingeben.",
+  ssoConflict:
+    "Die SSO-Einstellungen wurden in einem anderen Tab geändert. Diese Seite vor dem nächsten Versuch neu laden.",
+  ssoFailed:
+    "SSO konnte nicht abgeschlossen werden. Erneut versuchen oder mit Benutzername und Passwort anmelden.",
+  ssoNotLinked:
+    "Diese SSO-Identität ist mit keinem GradeShelf-Konto verbunden. Lokal anmelden und unter Einstellungen → Sicherheit verbinden.",
+  ssoAccountHelp:
+    "Die SSO-Identität mit diesem Konto verbinden, um die bisherigen Noten weiterzuverwenden. Das Entfernen der Verbindung beendet auch deine SSO-Sitzungen. Deine lokale Anmeldung bleibt verfügbar.",
+  ssoMfaHelp:
+    "SSO verwendet die Zwei-Faktor-Authentifizierung deines Anbieters. Die lokale GradeShelf-2FA gilt für die Passwortanmeldung. Abmelden beendet nur deine GradeShelf-Sitzung.",
+  ssoConnected: "Verbunden",
+  ssoDisconnected: "Nicht verbunden",
+  ssoDisabled:
+    "Der Administrator hat den SSO-Login deaktiviert. Eine bestehende Verbindung kannst du weiterhin entfernen.",
+  ssoReauthRequired:
+    "Zum Verbinden oder Entfernen von SSO erneut mit lokalem Benutzernamen, Passwort und gegebenenfalls 2FA anmelden. Diese Bestätigung gilt fünf Minuten.",
+  ssoReauthenticate: "Lokale Anmeldung bestätigen",
+  ssoConnect: "SSO verbinden",
+  ssoDisconnect: "SSO-Verbindung entfernen",
+  ssoWorking: "Bitte warten…",
+  ssoRemoved: "SSO-Verbindung entfernt.",
+  ssoAlreadyLinked:
+    "Dieses Konto hat bereits eine SSO-Verbindung. Diese vor dem Verbinden einer anderen Identität entfernen.",
+
   calendarTitle: "Kalenderabonnement",
   calendarIntro:
     "Abonniere deine Einträge in Apple Kalender, Outlook oder einer anderen Kalender-App über eine private ICS-URL. Änderungen im Kalender verändern GradeShelf nicht.",

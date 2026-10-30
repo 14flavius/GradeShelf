@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  // Calendar URLs are bearer credentials, including during local development.
-  logging: { incomingRequests: { ignore: [/^\/calendar\//] } },
+  // Private calendar URLs and OAuth authorization codes must never enter request logs.
+  logging: { incomingRequests: { ignore: [/^\/calendar\//, /^\/api\/auth\/callback\//] } },
   // GradeShelf serves downloads, not image previews. Disable the unused renderer/cache.
   images: { unoptimized: true },
   outputFileTracingExcludes: {
@@ -23,6 +23,13 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "same-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+      {
+        source: "/api/auth/callback/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
       {

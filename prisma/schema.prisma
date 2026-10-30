@@ -37,6 +37,17 @@ model SiteSettings {
   @@map("siteSettings")
 }
 
+model SsoSettings {
+  id                    Int     @id @default(1)
+  enabled               Boolean @default(false)
+  issuer                String
+  clientId              String
+  encryptedClientSecret String
+  revision              Int     @default(1)
+
+  @@map("ssoSettings")
+}
+
 model User {
   id                   String                @id @default(cuid())
   createdAt            DateTime              @default(now())
@@ -68,17 +79,21 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  expiresAt    DateTime
+  token        String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ipAddress    String?
+  userAgent    String?
+  ssoAccountId String?
+  ssoRevision  Int?
+  ssoAccount   Account? @relation(fields: [ssoAccountId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([ssoAccountId])
   @@map("session")
 }
 
@@ -97,6 +112,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  ssoSessions           Session[]
 
   @@unique([providerId, accountId])
   @@index([userId])

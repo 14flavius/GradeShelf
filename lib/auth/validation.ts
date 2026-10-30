@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ssoProviderId } from "./sso-validation.ts";
 
 export const usernameSchema = z
   .string()
@@ -29,6 +30,14 @@ const changePasswordSchema = z
   });
 
 export const authBodies = {
+  "/sign-in/social": z
+    .object({
+      provider: z.literal(ssoProviderId),
+      callbackURL: z.string().max(2048).optional(),
+    })
+    .strict(),
+  "/link-social": z.object({ provider: z.literal(ssoProviderId) }).strict(),
+  "/unlink-account": z.object({ accountId: z.string().min(1).max(128) }).strict(),
   "/sign-in/username": z
     .object({
       username: usernameSchema,
@@ -51,4 +60,9 @@ export const authBodies = {
     .strict(),
 } satisfies Record<string, z.ZodType>;
 
-export const exposedAuthPaths = new Set(["/get-session", "/sign-out", ...Object.keys(authBodies)]);
+export const exposedAuthPaths = new Set([
+  "/get-session",
+  "/sign-out",
+  "/callback/oidc",
+  ...Object.keys(authBodies),
+]);

@@ -53,5 +53,11 @@ export function authErrorMessage(
   if (error?.code === "PASSWORD_CHANGE_REQUIRED") {
     return "passwordRequired";
   }
+  if (error?.code === "SSO_REAUTH_REQUIRED") {
+    return "ssoReauthRequired";
+  }
+  if (error?.code === "SSO_ALREADY_LINKED") {
+    return "ssoAlreadyLinked";
+  }
   return fallback;
 }
