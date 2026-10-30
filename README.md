@@ -238,10 +238,10 @@ applies to local password sign-in. Signing out only ends the GradeShelf session,
 so a later SSO login may reuse the provider's existing session.
 
 Local account suspension immediately blocks access, including SSO. Suspending a
-user only at the provider does not revoke an existing GradeShelf session, which
-can last up to seven days; suspend the account in GradeShelf as well when immediate
-revocation is required. Back up `.env` together with the database to retain the
-key needed to decrypt the stored SSO client secret.
+user only at the provider does not revoke existing GradeShelf sessions; suspend
+the account in GradeShelf as well when immediate revocation is required.
+Back up `.env` together with the database to retain the key needed to decrypt the
+stored SSO client secret.
 
 ### Optional upload limits
 
