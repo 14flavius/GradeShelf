@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">GradeShelf</title>
+  <desc id="description">A self-hosted grade tracker and exam planner. Grades, exams and notes, all on your server.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1120" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101827"/>
+      <stop offset="1" stop-color="#162A50"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(934 145) rotate(90) scale(245 340)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3764FF" stop-opacity=".36"/>
+      <stop offset="1" stop-color="#3764FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="884" y1="58" x2="1006" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#CBDCFF"/>
+    </linearGradient>
+    <linearGradient id="shelf" x1="795" y1="235" x2="1027" y2="257" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B6CCFF"/>
+      <stop offset=".5" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D5E2FF"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" stroke="#A8C0FF" stroke-opacity=".045"/>
+    </pattern>
+    <clipPath id="frame"><rect width="1120" height="300" rx="20"/></clipPath>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="1120" height="300" fill="url(#background)"/>
+    <rect width="1120" height="300" fill="url(#grid)"/>
+    <rect width="1120" height="300" fill="url(#glow)"/>
+    <circle cx="942" cy="150" r="197" stroke="#A5BDFF" stroke-opacity=".1"/>
+    <circle cx="942" cy="150" r="149" stroke="#A5BDFF" stroke-opacity=".08"/>
+    <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+      <text x="60" y="62" fill="#A7BEF4" font-size="13" font-weight="600" letter-spacing="2.5">SELF-HOSTED GRADE TRACKER</text>
+      <text x="56" y="156" fill="#FFFFFF" font-size="80" font-weight="750" letter-spacing="-3">GradeShelf</text>
+      <text x="60" y="201" fill="#C1CEEA" font-size="22">Grades, exams and notes. All on your server.</text>
+      <g fill="#8FA9DC" font-size="13" font-weight="500">
+        <text x="60" y="257">Docker</text>
+        <circle cx="126" cy="252" r="2" fill="#5978B6"/>
+        <text x="145" y="257">SQLite</text>
+        <circle cx="210" cy="252" r="2" fill="#5978B6"/>
+        <text x="229" y="257">English + German</text>
+      </g>
+    </g>
+    <rect x="800" y="130" width="88" height="105" rx="17" fill="#6B94FA"/>
+    <rect x="837" y="94" width="107" height="141" rx="20" fill="#A5C0FF"/>
+    <rect x="880" y="58" width="130" height="177" rx="24" fill="url(#paper)"/>
+    <path d="M912 149L936 173L978 125" stroke="#2859F6" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M793 235H1027C1027 248.255 1016.255 259 1003 259H817C803.745 259 793 248.255 793 235Z" fill="url(#shelf)"/>
+    <rect x=".5" y=".5" width="1119" height="299" rx="19.5" stroke="#8EB2FF" stroke-opacity=".14"/>
+  </g>
+</svg>
