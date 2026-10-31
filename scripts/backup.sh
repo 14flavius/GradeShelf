@@ -19,7 +19,7 @@ running=$(docker inspect --format '{{.State.Running}}' "$container")
 mkdir -p backups
 backup=$(mktemp -d "./backups/$(date -u +%Y%m%d-%H%M%S)-XXXXXX")
 cp .env "$backup/.env"
-cp docker-compose.yml "$backup/docker-compose.yml"
+cp docker-compose.yml "$backup/docker-compose.yml.backup"
 docker inspect --format '{{.Image}}' "$container" > "$backup/image-id.txt"
 
 finish() {
