@@ -70,7 +70,7 @@
 Normal grade lists keep their existing calculation. Upper-secondary lists track calculated
 averages and received final grades separately. Different scales are never combined.
 The optional target calculator shows what one additional grade would need to achieve.
-See the [changelog](CHANGELOG.md) for release notes.
+See the [releases](https://github.com/14flavius/GradeShelf/releases) for release notes.
 
 ## Installation
 
