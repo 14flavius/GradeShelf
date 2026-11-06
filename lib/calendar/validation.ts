@@ -10,6 +10,8 @@ export const calendarVariables = [
   "status",
   "grade",
   "weight",
+  "period",
+  "group",
   "note",
   "url",
 ] as const;

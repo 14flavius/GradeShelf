@@ -46,6 +46,7 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
           description: true,
           status: true,
           gradingSystemId: true,
+          periodMode: true,
           isDefault: true,
           useAllGradeTypes: true,
           gradingSystemLockedAt: true,
@@ -61,6 +62,7 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
           gradeListId: true,
           name: true,
           color: true,
+          isAdvanced: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -89,6 +91,9 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
           gradeListId: true,
           subjectId: true,
           gradeTypeId: true,
+          subjectPeriodId: true,
+          groupId: true,
+          gradeText: true,
           title: true,
           date: true,
           grade: true,
@@ -124,6 +129,36 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
         },
       }),
     ]);
+    const [gradePeriods, subjectPeriods, subjectGradeTypes, gradeGroups] = await Promise.all([
+      tx.gradePeriod.findMany({
+        where: { userId },
+        orderBy: { id: "asc" },
+        select: { id: true, gradeListId: true, position: true },
+      }),
+      tx.subjectPeriod.findMany({
+        where: { userId },
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          gradeListId: true,
+          subjectId: true,
+          periodId: true,
+          enrolled: true,
+          weightingMode: true,
+          finalGrade: true,
+        },
+      }),
+      tx.subjectGradeType.findMany({
+        where: { userId },
+        orderBy: [{ subjectPeriodId: "asc" }, { gradeTypeId: "asc" }],
+        select: { subjectPeriodId: true, gradeTypeId: true, share: true },
+      }),
+      tx.gradeGroup.findMany({
+        where: { userId },
+        orderBy: { id: "asc" },
+        select: { id: true, subjectPeriodId: true, gradeTypeId: true, name: true, weight: true },
+      }),
+    ]);
     const calendarFeed = await tx.calendarFeed.findUnique({
       where: { userId },
       select: {
@@ -155,7 +190,7 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
       filename: `gradeshelf-export-${exportedAt.toISOString().replace(/[:.]/g, "-")}.zip`,
       data: {
         format: "gradeshelf-export",
-        formatVersion: 1,
+        formatVersion: 2,
         exportedAt,
         profile,
         browserPreferences: { theme },
@@ -170,6 +205,10 @@ export async function readExport(db: PrismaClient, userId: string, theme: Theme)
               ...definition,
             };
           }),
+        gradePeriods,
+        subjectPeriods,
+        subjectGradeTypes,
+        gradeGroups,
         gradeLists,
         subjects,
         gradeTypes,
@@ -240,8 +279,11 @@ export function streamExport(
       [
         "GradeShelf — personal data export / Persönlicher Datenexport",
         "",
-        "gradeshelf.json: UTF-8 JSON, formatVersion 1. Dates are YYYY-MM-DD; timestamps are UTC (ISO 8601).",
+        "gradeshelf.json: UTF-8 JSON, formatVersion 2. Dates are YYYY-MM-DD; timestamps are UTC (ISO 8601).",
         "All records belong to profile.id. IDs connect lists, subjects, types, entries and attachments.",
+        "subjectGradeTypes.share is an integer in hundredths of a percent (10000 = 100%). Period position 0 holds whole-list settings.",
+        "finalGrade is the recorded final grade; it is separate from the calculated average. Groups combine their entries before weighting.",
+        "gradeText preserves an explicitly entered tendency; grade holds its numeric value.",
         "grade = null means no grade; 0 is a grade. Entry weights are saved snapshots.",
         "For letter systems, grade is a category value: gradingSystems[].letters maps value to label and points.",
         "Letter averages use the explicit points, never the category values. A and A+ stay distinct.",

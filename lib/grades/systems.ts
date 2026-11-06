@@ -44,6 +44,15 @@ export const gradingSystems = {
     direction: "LOWER_IS_BETTER",
     unit: "GRADE",
   },
+  de_school_extended_v1: {
+    labelKey: "scaleGermanExtended",
+    min: 0.7,
+    max: 6,
+    decimalPlaces: 2,
+    entryStep: 0.01,
+    direction: "LOWER_IS_BETTER",
+    unit: "GRADE",
+  },
   school_1_5_v1: {
     labelKey: "scaleOneFive",
     min: 1,
@@ -173,7 +182,15 @@ export function gradePoints(systemId: GradingSystemId, value: number) {
   return letterGrades(systemId)?.find((letter) => letter.value === valid)?.points ?? valid;
 }
 
-export function formatGrade(value: number, systemId: GradingSystemId, locale: "en" | "de") {
+export function formatGrade(
+  value: number,
+  systemId: GradingSystemId,
+  locale: "en" | "de",
+  originalText?: string | null,
+) {
+  if (systemId === "de_school_extended_v1" && originalText) {
+    return originalText;
+  }
   const letters = letterGrades(systemId);
   if (letters) {
     return letters.find((letter) => letter.value === value)?.label ?? "—";

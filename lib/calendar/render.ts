@@ -1,20 +1,29 @@
+import { periodLabel } from "../grades/periods.ts";
 import type { Locale } from "../i18n/config.ts";
 import { entryStatus, formatCalendarDate, localCalendarDate } from "../grades/dates.ts";
 import { formatGrade } from "../grades/systems.ts";
-import type { GradingSystemId } from "../../generated/prisma/enums.ts";
+import type { GradingSystemId, PeriodMode } from "../../generated/prisma/enums.ts";
 import { messages } from "../i18n/messages.ts";
 import type { CalendarSettings, CalendarVariable } from "./validation.ts";
 
-export type CalendarEntry = {
+type CalendarEntry = {
   id: string;
   title: string;
   date: string;
   grade: number | null;
+  gradeText: string | null;
+  subjectPeriod: { period: { position: number } } | null;
+  group: { name: string } | null;
   weight: number;
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
-  gradeList: { name: string; gradingSystemId: GradingSystemId; updatedAt: Date };
+  gradeList: {
+    name: string;
+    gradingSystemId: GradingSystemId;
+    periodMode: PeriodMode;
+    updatedAt: Date;
+  };
   subject: { name: string; updatedAt: Date };
   gradeType: { name: string; updatedAt: Date };
 };
@@ -53,8 +62,17 @@ export function calendarPreview(
     date: formatCalendarDate(entry.date, locale),
     status: status === "GRADED" ? t.graded : status === "UPCOMING" ? t.upcoming : t.pendingGrade,
     grade:
-      entry.grade === null ? "" : formatGrade(entry.grade, entry.gradeList.gradingSystemId, locale),
+      entry.grade === null
+        ? ""
+        : formatGrade(entry.grade, entry.gradeList.gradingSystemId, locale, entry.gradeText),
     weight: new Intl.NumberFormat(locale).format(entry.weight),
+    period:
+      entry.gradeList.periodMode === "NONE"
+        ? ""
+        : entry.subjectPeriod?.period.position
+          ? periodLabel(entry.subjectPeriod.period.position, t)
+          : t.unassignedPeriod,
+    group: entry.group?.name ?? "",
     note: entry.note ?? "",
     url: `${baseURL}/entries/${encodeURIComponent(entry.id)}`,
   };
@@ -65,7 +83,7 @@ export function calendarPreview(
   };
 }
 
-export function escapeCalendarText(value: string) {
+function escapeCalendarText(value: string) {
   return value
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
     .replace(/\\/g, "\\\\")
@@ -75,7 +93,7 @@ export function escapeCalendarText(value: string) {
 }
 
 // RFC 5545 folds at 75 UTF-8 octets, including the continuation's leading space.
-export function calendarLine(value: string) {
+function calendarLine(value: string) {
   let line = "";
   let bytes = 0;
   let output = "";

@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { MessageKey } from "../i18n/messages.ts";
 
 export const ssoProviderId = "oidc";
-export const ssoSettingsPath = "/settings#sso-settings";
 export const ssoReauthPath = "/login?reauth=sso&returnTo=%2Fsettings%23sso-settings";
 
 // HTTP is only useful for a loopback test provider during local development.

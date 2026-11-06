@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { gradeListInputSchema, subjectInputSchema, gradeTypeInputSchema } from "./validation.ts";
+import {
+  gradeListInputSchema,
+  subjectInputSchema,
+  gradeTypeInputSchema,
+  subjectPeriodInputSchema,
+  gradeGroupInputSchema,
+} from "./validation.ts";
 import { setupInputSchema, listTypeSelectionSchema } from "./setup.ts";
 
 const listEditorInput = gradeListInputSchema.extend({
@@ -38,6 +44,9 @@ export const gradeCommandSchema = z.discriminatedUnion("action", [
   z
     .object({ action: z.literal("subject.delete"), id, confirmation: deleteConfirmationSchema })
     .strict(),
+  z.object({ action: z.literal("period.update"), id, data: subjectPeriodInputSchema }).strict(),
+  z.object({ action: z.literal("group.update"), id, data: gradeGroupInputSchema }).strict(),
+  z.object({ action: z.literal("group.delete"), id }).strict(),
   z.object({ action: z.literal("type.create"), data: gradeTypeInputSchema }).strict(),
   z.object({ action: z.literal("type.update"), id, data: gradeTypeInputSchema }).strict(),
   z.object({ action: z.literal("type.delete"), id }).strict(),

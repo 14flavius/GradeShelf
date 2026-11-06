@@ -36,8 +36,24 @@ export function AverageDisplay({
         {t[system.labelKey]} ·{" "}
         {system.direction === "LOWER_IS_BETTER" ? t.lowerBetter : t.higherBetter}
       </p>
+      {average.basis && average.basis !== "ENTRIES" && (
+        <p className="text-xs text-muted-foreground">
+          {average.basis === "PERIODS"
+            ? t.periodAverage
+            : average.basis === "TYPES"
+              ? t.typeAverage
+              : t.subjectAverage}
+        </p>
+      )}
+      {average.incomplete && average.gradedCount > 0 && (
+        <p className="text-xs text-muted-foreground">{t.incompleteAverage}</p>
+      )}
       <p className="sr-only">
-        {average.value === null ? t.noGradedEntries : `${t.gradedEntries}: ${count}`}
+        {average.value === null
+          ? average.basis === "PERIODS"
+            ? t.emptyFinalGrades
+            : t.noGradedEntries
+          : `${average.basis === "PERIODS" ? t.finalGradeCount : t.gradedEntries}: ${count}`}
       </p>
     </div>
   );

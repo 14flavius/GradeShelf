@@ -17,6 +17,7 @@ export function TypeChecklist({
       <legend className="sr-only">{t.existingGradeTypes}</legend>
       <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
         <input
+          name="selectAllTypes"
           type="checkbox"
           className="size-5 accent-primary"
           checked={allSelected}

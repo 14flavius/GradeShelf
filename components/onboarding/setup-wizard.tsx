@@ -6,17 +6,34 @@ import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
 import { MutationError } from "@/components/grades/form-parts";
 import { useGradeMutation } from "@/components/grades/use-grade-mutation";
-import { gradeListInputSchema, normalizedGradeName } from "@/lib/grades/validation";
-import { setupSubjectsSchema, setupTypeSelectionSchema } from "@/lib/grades/setup";
+import {
+  gradeListInputSchema,
+  gradeTypeInputSchema,
+  normalizedGradeName,
+} from "@/lib/grades/validation";
+import {
+  setupSubjectsSchema,
+  setupTypeSelectionSchema,
+  setupWeightingSchema,
+} from "@/lib/grades/setup";
 import type { TypeChoice } from "@/lib/grades/types";
 import type { GradeCommand } from "@/lib/grades/commands";
 import type { MessageKey } from "@/lib/i18n/messages";
-import { SetupFields, SetupSummary, type SetupDraft } from "./setup-fields";
+import { SetupFields, SetupSummary } from "./setup-fields";
+import {
+  type SetupDraft,
+  setupSubjectsInput,
+  setupWeightingInput,
+  setupUsesEntryWeights,
+} from "./setup-draft";
+import { periodLabel } from "@/lib/grades/periods";
 
 export function SetupWizard({
   onClose,
   availableTypes,
+  introduction = true,
 }: {
+  introduction?: boolean;
   onClose: () => void;
   availableTypes: TypeChoice[];
 }) {
@@ -27,7 +44,7 @@ export function SetupWizard({
   const content = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const helpId = useId();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(introduction ? 0 : 1);
   const [direction, setDirection] = useState("forward");
   const [error, setError] = useState<MessageKey | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -36,18 +53,28 @@ export function SetupWizard({
   const mutation = useGradeMutation({ refresh: false });
   const [draftState, setDraft] = useState<SetupDraft>(() => ({
     name: "",
-    gradingSystemId: "",
+    gradingSystemId: "de_school_v1",
+    periodMode: "NONE",
+    currentPeriod: 1,
+    semesterWeighting: { weightingMode: "ENTRIES", shares: {} },
     subjects: [{ key: 0, name: "" }],
     types: availableTypes.length
       ? []
       : [
-          { key: 0, name: t.tutorialTypeExam, weight: "2", suggestedName: "tutorialTypeExam" },
+          {
+            key: 0,
+            name: t.tutorialTypeExam,
+            weight: "2",
+            suggestedName: "tutorialTypeExam",
+            suggestedWeight: true,
+          },
           { key: 1, name: t.tutorialTypeOral, weight: "1", suggestedName: "tutorialTypeOral" },
         ],
     existingTypeIds: availableTypes.map(({ id }) => id),
     showOnDashboard: true,
     includeInOverall: true,
   }));
+  const semesters = draftState.periodMode === "SEMESTERS";
   // Only untouched suggestions follow the language; typed names and saved types stay as entered.
   const draft: SetupDraft = {
     ...draftState,
@@ -57,7 +84,24 @@ export function SetupWizard({
     })),
     types: draftState.types.map((type) => ({
       ...type,
-      name: type.suggestedName ? t[type.suggestedName] : type.name,
+      name: type.suggestedName
+        ? t[
+            semesters && type.suggestedName === "tutorialTypeExam"
+              ? "setupWrittenExam"
+              : semesters && type.suggestedName === "tutorialTypeOral"
+                ? "setupOtherAssessment"
+                : type.suggestedName
+          ]
+        : type.name,
+      // Unused, hidden entry weights must not block a percentage-only setup.
+      weight: type.suggestedWeight
+        ? semesters
+          ? "1"
+          : "2"
+        : !setupUsesEntryWeights(draftState) &&
+            !gradeTypeInputSchema.shape.weight.safeParse(type.weight).success
+          ? "1"
+          : type.weight,
     })),
   };
   const steps = [
@@ -67,6 +111,8 @@ export function SetupWizard({
     t.tutorialTypesStep,
     t.tutorialReviewStep,
   ];
+  const firstStep = introduction ? 0 : 1;
+  const visibleSteps = steps.map((label, index) => ({ label, index })).slice(firstStep);
   const titles = [
     t.tutorialWelcome,
     t.tutorialList,
@@ -78,10 +124,10 @@ export function SetupWizard({
   const descriptions = [
     t.tutorialWelcomeHelp,
     t.tutorialListHelp,
-    t.tutorialSubjectsHelp,
-    t.tutorialTypesHelp,
+    semesters ? t.setupSemesterSubjectsHelp : t.tutorialSubjectsHelp,
+    semesters ? t.setupSemesterTypesHelp : t.tutorialTypesHelp,
     t.tutorialReviewHelp,
-    t.tutorialDoneHelp,
+    semesters ? t.setupSemesterReady : t.tutorialDoneHelp,
   ];
 
   useEffect(() => {
@@ -110,15 +156,18 @@ export function SetupWizard({
   function stepError(target: number): MessageKey | null {
     if (
       target === 1 &&
-      !gradeListInputSchema.safeParse({ name: draft.name, gradingSystemId: draft.gradingSystemId })
-        .success
+      !gradeListInputSchema.safeParse({
+        name: draft.name,
+        gradingSystemId: draft.gradingSystemId,
+        periodMode: draft.periodMode,
+      }).success
     ) {
       return "gradeInvalid";
     }
-    if (
-      target === 2 &&
-      !setupSubjectsSchema.safeParse(draft.subjects.map(({ name }) => ({ name }))).success
-    ) {
+    if (target === 2 && !setupSubjectsSchema.safeParse(setupSubjectsInput(draft, false)).success) {
+      if (semesters && draft.subjects.some((subject) => subject.enrolledPeriods?.length === 0)) {
+        return "setupEnrollmentInvalid";
+      }
       return "tutorialSubjectInvalid";
     }
     if (target === 3) {
@@ -139,12 +188,30 @@ export function SetupWizard({
       ) {
         return "typeNameExists";
       }
+      if (semesters) {
+        const count = draft.types.length + draft.existingTypeIds.length;
+        const weightings = [
+          draft.semesterWeighting,
+          ...draft.subjects.flatMap((subject) => (subject.weighting ? [subject.weighting] : [])),
+        ];
+        if (
+          weightings.some((value) => {
+            const input = setupWeightingInput(value, draft);
+            return (
+              !setupWeightingSchema.safeParse(input).success ||
+              (input.weightingMode === "PERCENTAGES" && input.shares.length !== count)
+            );
+          })
+        ) {
+          return "setupWeightingInvalid";
+        }
+      }
     }
     return null;
   }
 
   function navigate(next: number) {
-    if (!submitted && next !== step && next >= 0 && next < steps.length) {
+    if (!submitted && next !== step && next >= firstStep && next < steps.length) {
       move(next);
     }
   }
@@ -178,8 +245,15 @@ export function SetupWizard({
           requestId: Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
             byte.toString(16).padStart(2, "0"),
           ).join(""),
-          list: { name: draft.name, gradingSystemId: draft.gradingSystemId },
-          subjects: draft.subjects.map(({ name }) => ({ name })),
+          list: {
+            name: draft.name,
+            gradingSystemId: draft.gradingSystemId,
+            periodMode: draft.periodMode,
+          },
+          subjects: setupSubjectsInput(draft),
+          ...(semesters
+            ? { semesterWeighting: setupWeightingInput(draft.semesterWeighting, draft) }
+            : {}),
           types: draft.types.map(({ name, weight }) => ({ name, weight })),
           existingTypeIds: draft.existingTypeIds,
           preferences: {
@@ -239,7 +313,7 @@ export function SetupWizard({
             <div>
               <p className="mb-8 text-sm font-medium text-muted-foreground">{t.tutorialTitle}</p>
               <ol className="space-y-2">
-                {steps.map((label, index) => (
+                {visibleSteps.map(({ label, index }) => (
                   <li key={index}>
                     <button
                       type="button"
@@ -252,7 +326,7 @@ export function SetupWizard({
                         aria-hidden="true"
                         className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step === index || (step > index && !stepError(index)) ? "bg-primary text-primary-foreground" : "bg-muted"}`}
                       >
-                        {step > index && !stepError(index) ? "✓" : index + 1}
+                        {step > index && !stepError(index) ? "✓" : index + 1 - firstStep}
                       </span>
                       {label}
                     </button>
@@ -260,9 +334,6 @@ export function SetupWizard({
                 ))}
               </ol>
             </div>
-            <p className="mt-8 max-w-60 text-xs leading-relaxed text-muted-foreground">
-              {t.tutorialAdditive}
-            </p>
           </aside>
           <form
             onSubmit={advance}
@@ -274,20 +345,21 @@ export function SetupWizard({
                 <span>
                   {step === 5
                     ? t.tutorialDoneLabel
-                    : `${t.tutorialStep} ${step + 1} ${t.tutorialOf} ${steps.length}`}
+                    : `${t.tutorialStep} ${step + 1 - firstStep} ${t.tutorialOf} ${visibleSteps.length}`}
                 </span>
                 <span className="hidden lg:inline">{steps[step] ?? t.tutorialSaved}</span>
                 {step < 5 ? (
                   <select
+                    name="setupStep"
                     aria-label={t.tutorialStep}
                     value={step}
                     disabled={submitted}
                     onChange={(event) => navigate(Number(event.target.value))}
                     className="min-h-10 max-w-[55%] rounded-lg border border-input bg-field pl-3 text-sm text-foreground lg:hidden"
                   >
-                    {steps.map((label, index) => (
+                    {visibleSteps.map(({ label, index }) => (
                       <option key={index} value={index}>
-                        {index + 1}. {label}
+                        {index + 1 - firstStep}. {label}
                       </option>
                     ))}
                   </select>
@@ -298,7 +370,9 @@ export function SetupWizard({
               <div className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
                 <div
                   className="h-full rounded-full bg-primary motion-safe:transition-[width] motion-safe:duration-500"
-                  style={{ width: `${Math.min((step + 1) / steps.length, 1) * 100}%` }}
+                  style={{
+                    width: `${Math.min((step + 1 - firstStep) / visibleSteps.length, 1) * 100}%`,
+                  }}
                 />
               </div>
             </div>
@@ -366,9 +440,6 @@ export function SetupWizard({
                       <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
                         {t.tutorialDraftHint}
                       </p>
-                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground lg:hidden">
-                        {t.tutorialAdditive}
-                      </p>
                     </>
                   )}
                   {step > 0 && step < 4 && (
@@ -398,10 +469,19 @@ export function SetupWizard({
                           {draft.name}
                         </p>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          {draft.subjects.length} {t.subjects} ·{" "}
-                          {draft.types.length + draft.existingTypeIds.length} {t.gradeTypes}
+                          {draft.subjects.length}{" "}
+                          {draft.subjects.length === 1 ? t.subject : t.subjects} ·{" "}
+                          {draft.types.length + draft.existingTypeIds.length}{" "}
+                          {draft.types.length + draft.existingTypeIds.length === 1
+                            ? t.gradeType
+                            : t.gradeTypes}
                         </p>
                       </div>
+                      {semesters && (
+                        <p className="text-sm font-medium">
+                          {t.setupCurrentPeriod}: {periodLabel(draft.currentPeriod, t)}
+                        </p>
+                      )}
                       <p className="text-sm leading-relaxed">{t.tutorialEntryTip}</p>
                       <p className="text-sm leading-relaxed text-muted-foreground">
                         {t.tutorialMoreTip}
@@ -417,7 +497,7 @@ export function SetupWizard({
                 <p className="text-xs text-muted-foreground">{t.tutorialRetryHelp}</p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-3">
-                {step > 0 && step < 5 ? (
+                {step > firstStep && step < 5 ? (
                   <Button variant="secondary" onClick={() => move(step - 1)} disabled={submitted}>
                     {t.tutorialBack}
                   </Button>
@@ -431,7 +511,9 @@ export function SetupWizard({
                     className="ml-auto"
                     onClick={() => {
                       onClose();
-                      router.push(`/lists/${savedId}`);
+                      router.push(
+                        `/lists/${savedId}${semesters ? `?period=${draft.currentPeriod}` : ""}`,
+                      );
                     }}
                   >
                     {t.tutorialOpenList}

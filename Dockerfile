@@ -34,7 +34,9 @@ COPY --from=builder --chown=node:node /app/lib/auth/bootstrap.ts /app/lib/auth/v
 COPY --from=builder --chown=node:node /app/lib/attachments/config.ts /app/lib/attachments/rules.ts ./lib/attachments/
 COPY --from=builder --chown=node:node /app/generated/prisma ./generated/prisma
 COPY --from=builder --chown=node:node /app/scripts/init-storage.mjs ./scripts/init-storage.mjs
-COPY --from=builder --chown=node:node /app/scripts/create-admin.mts /app/scripts/check-config.mts ./scripts/
+COPY --from=builder --chown=node:node /app/scripts/create-admin.mts /app/scripts/check-config.mts /app/scripts/import-legacy.mts ./scripts/
+COPY --from=builder --chown=node:node /app/lib/import/legacy.ts ./lib/import/
+COPY --from=builder --chown=node:node /app/lib/grades/validation.ts /app/lib/grades/systems.ts /app/lib/grades/grade-input.ts /app/lib/grades/weighting.ts ./lib/grades/
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 USER node
 EXPOSE 3000

@@ -1,6 +1,6 @@
 {
   "name": "gradeshelf",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": {
     "name": "Flavius Hager",
     "url": "https://flavius-hager.de"
@@ -25,6 +25,7 @@
     "lint": "eslint",
     "format": "prettier --write \"{app,components,lib,scripts}/**/*.{ts,tsx,mts,mjs,css}\" next.config.ts instrumentation.ts prisma.config.ts eslint.config.mjs package.json tsconfig.json",
     "format:check": "prettier --check \"{app,components,lib,scripts}/**/*.{ts,tsx,mts,mjs,css}\" next.config.ts instrumentation.ts prisma.config.ts eslint.config.mjs package.json tsconfig.json",
+    "import:legacy": "node scripts/import-legacy.mts",
     "admin:create": "node scripts/create-admin.mts",
     "typecheck": "npm run db:generate && NEXT_TELEMETRY_DISABLED=1 next typegen && tsc --noEmit",
     "db:generate": "CHECKPOINT_DISABLE=1 prisma generate",

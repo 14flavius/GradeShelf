@@ -22,6 +22,7 @@
 !scripts/check-config.mts
 !scripts/prepare-standalone.mjs
 !scripts/create-admin.mts
+!scripts/import-legacy.mts
 !docker-entrypoint.sh
 !LICENSE
 **/*.db

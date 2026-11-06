@@ -14,6 +14,7 @@ const summarySelect = {
   title: true,
   date: true,
   grade: true,
+  gradeText: true,
   weight: true,
   note: true,
   gradeList: { select: { name: true, gradingSystemId: true } },

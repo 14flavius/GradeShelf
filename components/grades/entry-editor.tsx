@@ -1,5 +1,9 @@
 "use client";
 
+import { periodLabel } from "@/lib/grades/periods";
+import { tendencyText } from "@/lib/grades/grade-input";
+import { defaultEntryWeight } from "@/lib/grades/weighting";
+
 import { FilePicker, useAttachmentUpload } from "@/components/attachments/upload";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
@@ -31,6 +35,7 @@ type Props = {
   types: TypeChoice[];
   gradeListId?: string;
   subjectId?: string;
+  periodPosition?: number;
   entry?: EntryView;
   lookup?: { id: string; title: string };
   iconOnly?: boolean;
@@ -145,6 +150,7 @@ function EntryForm({
   types,
   gradeListId,
   subjectId,
+  periodPosition,
   entry,
   title,
   onClose,
@@ -168,15 +174,50 @@ function EntryForm({
   const [chosenTypeId, setTypeId] = useState(entry?.gradeTypeId ?? "");
   const [date, setDate] = useState(() => entry?.date ?? localCalendarDate());
   const list = lists.find((item) => item.id === listId);
+  const [chosenPeriod, setChosenPeriod] = useState(entry?.subjectPeriodId ?? "");
+  const [chosenGroup, setChosenGroup] = useState(entry?.groupId ?? "");
+  const [customWeight, setCustomWeight] = useState<{ key: string; value: string } | null>(null);
+  const subject = list?.subjects.find((item) => item.id === selectedSubject);
+  const periods =
+    subject?.periods.filter(
+      (period) =>
+        period.enrolled &&
+        (list?.periodMode === "NONE"
+          ? period.period.position === 0
+          : period.period.position > 0 || period.id === entry?.subjectPeriodId),
+    ) ?? [];
+  const preferredPosition =
+    list?.subjects.flatMap((item) => item.periods).find((item) => item.id === chosenPeriod)?.period
+      .position ??
+    (listId === gradeListId && periodPosition && list?.periodMode !== "NONE"
+      ? periodPosition
+      : undefined);
+  const period =
+    periods.find((item) => item.id === chosenPeriod) ??
+    (preferredPosition === undefined
+      ? periods[0]
+      : periods.find((item) => item.period.position === preferredPosition));
+  const settings =
+    list?.periodMode === "SCHOOL_YEAR"
+      ? subject?.periods.find((item) => item.period.position === 0)
+      : period;
   const availableTypes = types.filter(
     (type) =>
-      list?.useAllGradeTypes ||
-      list?.gradeTypes.some((selected) => selected.gradeTypeId === type.id) ||
-      (entry?.gradeTypeId === type.id && entry.gradeListId === listId),
+      (settings?.weightingMode !== "PERCENTAGES" ||
+        settings.shares.some((share) => share.gradeTypeId === type.id) ||
+        entry?.gradeTypeId === type.id) &&
+      (list?.useAllGradeTypes ||
+        list?.gradeTypes.some((selected) => selected.gradeTypeId === type.id) ||
+        (entry?.gradeTypeId === type.id && entry.gradeListId === listId)),
   );
   const typeId = availableTypes.some((type) => type.id === chosenTypeId)
     ? chosenTypeId
     : (availableTypes[0]?.id ?? "");
+  const groups = period?.groups.filter((group) => group.gradeTypeId === typeId) ?? [];
+  const groupId =
+    chosenGroup === "__new__" || groups.some((group) => group.id === chosenGroup)
+      ? chosenGroup
+      : "";
   const type = types.find((item) => item.id === typeId);
   const system = list ? gradingSystems[list.gradingSystemId] : null;
   const letters = list ? letterGrades(list.gradingSystemId) : null;
@@ -186,14 +227,22 @@ function EntryForm({
       ? entry.grade
       : null;
   const format = new Intl.NumberFormat(locale, { useGrouping: false, maximumFractionDigits: 2 });
-  const weight = entry && typeId === entry.gradeTypeId ? entry.weight : type?.weight;
+  const weight =
+    entry && typeId === entry.gradeTypeId
+      ? entry.weight
+      : type
+        ? defaultEntryWeight(type.weight, settings?.weightingMode)
+        : undefined;
+  const weightKey = `${typeId}:${period?.id ?? ""}`;
+  const weightInput =
+    customWeight?.key === weightKey ? customWeight.value : format.format(weight ?? 1);
   const ready = list && list.subjects.length > 0 && availableTypes.length > 0;
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) {
       return;
     }
-    if (!list) {
+    if (!list || !period) {
       mutation.invalid();
       return;
     }
@@ -216,6 +265,11 @@ function EntryForm({
       gradeListId: listId,
       subjectId: selectedSubject,
       gradeTypeId: typeId,
+      subjectPeriodId: period?.id,
+      groupId: groupId && groupId !== "__new__" ? groupId : null,
+      newGroupName: groupId === "__new__" ? form.get("newGroupName") : null,
+      weight: form.get("weight") ?? weight,
+      gradeText: tendencyText(form.get("grade")),
       title: form.get("title"),
       date,
       grade: form.get("grade"),
@@ -248,6 +302,7 @@ function EntryForm({
         <fieldset disabled={busy || savedId !== null} className="min-w-0 space-y-4">
           <FormField label={t.gradeList}>
             <select
+              name="gradeListId"
               className={`${controlClass} h-11 min-w-0`}
               required
               value={listId}
@@ -255,6 +310,8 @@ function EntryForm({
               onChange={(event) => {
                 setListId(event.target.value);
                 setSubject("");
+                setChosenPeriod("");
+                setChosenGroup("");
               }}
             >
               <option value="" disabled>
@@ -278,10 +335,14 @@ function EntryForm({
           <div className="grid items-start gap-4 sm:grid-cols-2">
             <FormField label={t.subject}>
               <select
+                name="subjectId"
                 className={`${controlClass} h-11 min-w-0`}
                 required
                 value={selectedSubject}
-                onChange={(event) => setSubject(event.target.value)}
+                onChange={(event) => {
+                  setSubject(event.target.value);
+                  setChosenGroup("");
+                }}
               >
                 <option value="" disabled>
                   {t.choose}
@@ -295,10 +356,14 @@ function EntryForm({
             </FormField>
             <FormField label={t.gradeType}>
               <select
+                name="gradeTypeId"
                 className={`${controlClass} h-11 min-w-0`}
                 required
                 value={typeId}
-                onChange={(event) => setTypeId(event.target.value)}
+                onChange={(event) => {
+                  setTypeId(event.target.value);
+                  setChosenGroup("");
+                }}
               >
                 <option value="" disabled>
                   {t.choose}
@@ -310,10 +375,85 @@ function EntryForm({
                 ))}
               </select>
               <span className="text-xs font-normal text-muted-foreground">
-                {t.weight}: {weight === undefined ? "—" : format.format(weight)}
+                {t.weight}: {weightInput.trim() || "—"}
               </span>
             </FormField>
           </div>
+          {list && list.periodMode !== "NONE" && (
+            <FormField label={t.halfYear}>
+              <select
+                name="subjectPeriodId"
+                className={controlClass}
+                required
+                value={period?.id ?? ""}
+                onChange={(event) => {
+                  setChosenPeriod(event.target.value);
+                  setChosenGroup("");
+                }}
+              >
+                {!period && (
+                  <option value="" disabled>
+                    {t.choose}
+                  </option>
+                )}
+                {periods.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.period.position === 0
+                      ? t.unassignedPeriod
+                      : periodLabel(item.period.position, t)}
+                  </option>
+                ))}
+              </select>
+              {subject && !period && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t.chooseEnrolledPeriod}
+                </span>
+              )}
+            </FormField>
+          )}
+          <details
+            className="rounded-2xl bg-muted/45 px-4"
+            open={entry?.groupId ? true : undefined}
+          >
+            <summary className="cursor-pointer py-3 text-sm font-medium">
+              {t.additionalOptions}
+            </summary>
+            <div className="space-y-4 pb-4">
+              <FormField label={t.weight}>
+                <Input
+                  name="weight"
+                  inputMode="decimal"
+                  required
+                  value={weightInput}
+                  onChange={(event) =>
+                    setCustomWeight({ key: weightKey, value: event.target.value })
+                  }
+                />
+              </FormField>
+              <FormField label={t.gradeGroup}>
+                <select
+                  name="groupId"
+                  className={controlClass}
+                  value={groupId}
+                  onChange={(event) => setChosenGroup(event.target.value)}
+                >
+                  <option value="">{t.noGradeGroup}</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name} · ×{format.format(group.weight)}
+                    </option>
+                  ))}
+                  <option value="__new__">{t.newGradeGroup}</option>
+                </select>
+              </FormField>
+              {groupId === "__new__" && (
+                <FormField label={t.groupName}>
+                  <Input name="newGroupName" required maxLength={120} />
+                </FormField>
+              )}
+              {groupId && <p className="text-xs text-muted-foreground">{t.groupHelp}</p>}
+            </div>
+          </details>
           <FormField label={t.entryTitle}>
             <Input
               name="title"
@@ -327,6 +467,7 @@ function EntryForm({
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <FormField label={t.entryDate}>
                 <Input
+                  name="date"
                   type="date"
                   required
                   value={date}
@@ -370,13 +511,15 @@ function EntryForm({
                   <Input
                     key={listId}
                     name="grade"
-                    inputMode="decimal"
+                    inputMode={
+                      list?.gradingSystemId === "de_school_extended_v1" ? "text" : "decimal"
+                    }
                     maxLength={16}
                     className="font-semibold"
                     defaultValue={
                       entry?.grade === undefined || entry.grade === null
                         ? ""
-                        : format.format(entry.grade)
+                        : (entry.gradeText ?? format.format(entry.grade))
                     }
                     data-autofocus={entry ? "desktop" : undefined}
                   />
@@ -400,6 +543,9 @@ function EntryForm({
                 )
               )}
             </div>
+            {list?.gradingSystemId === "de_school_extended_v1" && (
+              <p className="text-xs text-muted-foreground">{t.extendedGradeHelp}</p>
+            )}
             {legacyGrade !== null && (
               <p className="text-xs text-muted-foreground">{t.legacyGradeHelp}</p>
             )}
@@ -445,7 +591,7 @@ function EntryForm({
             <Button variant="secondary" disabled={busy} onClick={onClose}>
               {t.cancel}
             </Button>
-            <Button type="submit" disabled={busy || !ready}>
+            <Button type="submit" disabled={busy || !ready || !period}>
               {busy ? t.saving : savedId ? t.uploadAttachments : t.save}
             </Button>
           </div>

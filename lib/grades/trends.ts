@@ -1,5 +1,12 @@
-import type { GradingSystemId, Prisma, PrismaClient } from "@/generated/prisma/client";
-import { formatAverage, weightedAverage } from "./averages.ts";
+import { calculationSubjectSelect, readCalculationEntries } from "./calculation-data.ts";
+import type { GradingSystemId, PrismaClient } from "@/generated/prisma/client";
+import {
+  formatAverage,
+  weightedAverage,
+  calculateList,
+  calculateSubject,
+  type Average,
+} from "./averages.ts";
 import { gradingSystems } from "./systems.ts";
 
 type TrendEntry = {
@@ -18,9 +25,13 @@ const windowSize = 10;
 
 // Each point averages that grade and up to nine preceding grades, in examination order.
 // The overall averages elsewhere still include all grades.
-export function gradeTrend(systemId: GradingSystemId, entries: readonly TrendEntry[]) {
+export function gradeTrend<T extends TrendEntry>(
+  systemId: GradingSystemId,
+  entries: readonly T[],
+  calculate?: (entries: readonly T[]) => Average,
+) {
   const ordered = entries
-    .filter((entry): entry is TrendEntry & { grade: number } => entry.grade !== null)
+    .filter((entry): entry is T & { grade: number } => entry.grade !== null)
     .sort(
       (a, b) =>
         a.date.localeCompare(b.date) ||
@@ -28,28 +39,40 @@ export function gradeTrend(systemId: GradingSystemId, entries: readonly TrendEnt
         a.id.localeCompare(b.id),
     );
   const start = Math.max(0, ordered.length - windowSize);
-  const points = ordered.slice(start).map((entry, index) => {
-    const position = start + index + 1;
-    const windowStart = Math.max(0, position - windowSize);
-    const value = weightedAverage(systemId, ordered.slice(windowStart, position)).value;
-    if (value === null) {
-      throw new Error("TREND_AVERAGE_EMPTY");
-    }
-    return {
-      id: entry.id,
-      title: entry.title ?? "",
-      subjectName: entry.subject?.name ?? "",
-      date: entry.date,
-      grade: entry.grade,
-      weight: entry.weight,
-      position,
-      firstPosition: windowStart + 1,
-      value,
-    };
-  });
+  const points = ordered
+    .slice(start)
+    .map((entry, index) => {
+      const position = start + index + 1;
+      const windowStart = calculate ? 0 : Math.max(0, position - windowSize);
+      const slice = ordered.slice(windowStart, position);
+      const value = (calculate ? calculate(slice) : weightedAverage(systemId, slice)).value;
+      if (value === null) {
+        return null;
+      }
+      return {
+        id: entry.id,
+        title: entry.title ?? "",
+        subjectName: entry.subject?.name ?? "",
+        date: entry.date,
+        grade: entry.grade,
+        weight: entry.weight,
+        gradeText:
+          "gradeText" in entry && typeof entry.gradeText === "string" ? entry.gradeText : null,
+        position,
+        firstPosition: windowStart + 1,
+        value,
+      };
+    })
+    .filter((point) => point !== null);
   const current = points.at(-1)?.value ?? null;
   if (current === null || points.length < 2) {
-    return { status: "INSUFFICIENT" as const, current, difference: null, points };
+    return {
+      cumulative: !!calculate,
+      status: "INSUFFICIENT" as const,
+      current,
+      difference: null,
+      points,
+    };
   }
   // Compare the displayed endpoints so rounding cannot contradict the change label.
   // The curve and current average retain their full precision.
@@ -64,79 +87,33 @@ export function gradeTrend(systemId: GradingSystemId, entries: readonly TrendEnt
       : improvement > 0
         ? ("IMPROVING" as const)
         : ("DECLINING" as const);
-  return { status, current, difference, points };
-}
-
-const newestFirst = [
-  { date: "desc" },
-  { gradedAt: "desc" },
-  { id: "desc" },
-] satisfies Prisma.GradeEntryOrderByWithRelationInput[];
-
-async function readRecentTrend(
-  db: PrismaClient,
-  userId: string,
-  systemId: GradingSystemId,
-  filter: Prisma.GradeEntryWhereInput,
-) {
-  const where = { ...filter, userId, grade: { not: null } };
-  // Ten visible points need at most nineteen grades, including their rolling history.
-  // Loading every grade with relations can exceed SQLite's query parameter limit.
-  const [entries, total] = await db.$transaction([
-    db.gradeEntry.findMany({
-      where,
-      orderBy: newestFirst,
-      take: windowSize * 2 - 1,
-      select: {
-        id: true,
-        title: true,
-        date: true,
-        gradedAt: true,
-        grade: true,
-        weight: true,
-        subject: { select: { name: true } },
-      },
-    }),
-    db.gradeEntry.count({ where }),
-  ]);
-  const trend = gradeTrend(systemId, entries);
-  const offset = total - entries.length;
-  return {
-    ...trend,
-    points: trend.points.map((point) => ({
-      ...point,
-      position: point.position + offset,
-      firstPosition: point.firstPosition + offset,
-    })),
-  };
+  return { cumulative: !!calculate, status, current, difference, points };
 }
 
 export async function getDashboardTrends(db: PrismaClient, userId: string) {
-  const overallLists = {
-    userId,
-    status: "ACTIVE",
-    dashboardPreference: { is: { userId, includeInOverall: true } },
-  } satisfies Prisma.GradeListWhereInput;
-  const systems = await db.gradeList.findMany({
-    where: overallLists,
-    distinct: ["gradingSystemId"],
-    select: { gradingSystemId: true },
+  const records = await db.gradeList.findMany({
+    where: {
+      userId,
+      status: "ACTIVE",
+      dashboardPreference: {
+        is: { userId, OR: [{ includeInOverall: true }, { showOnDashboard: true }] },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      periodMode: true,
+      gradingSystemId: true,
+      dashboardPreference: { select: { includeInOverall: true, showOnDashboard: true } },
+      subjects: { where: { userId }, select: calculationSubjectSelect(userId) },
+    },
   });
-  const overall = new Map<GradingSystemId, ReturnType<typeof gradeTrend>>();
-  for (const { gradingSystemId } of systems) {
-    overall.set(
-      gradingSystemId,
-      await readRecentTrend(db, userId, gradingSystemId, {
-        gradeList: { ...overallLists, gradingSystemId },
-      }),
-    );
+  const lists = [];
+  for (const list of records) {
+    lists.push({ ...list, entries: await readCalculationEntries(db, userId, list.id) });
   }
-
-  const visibleLists = {
-    userId,
-    status: "ACTIVE",
-    dashboardPreference: { is: { userId, showOnDashboard: true } },
-  } satisfies Prisma.GradeListWhereInput;
+  const overall = new Map<string, ReturnType<typeof gradeTrend>>();
+  const flat = new Map<GradingSystemId, (typeof lists)[number]["entries"]>();
   const subjects: {
     id: string;
     name: string;
@@ -144,38 +121,71 @@ export async function getDashboardTrends(db: PrismaClient, userId: string) {
     listName: string;
     systemId: GradingSystemId;
     trend: ReturnType<typeof gradeTrend>;
+    latest: string;
   }[] = [];
-  // Find the three most recently examined subjects, even if one dominates recent grades.
-  for (let index = 0; index < 3; index++) {
-    const latest = await db.gradeEntry.findFirst({
-      where: {
-        userId,
-        grade: { not: null },
-        gradeList: visibleLists,
-        subjectId: { notIn: subjects.map((subject) => subject.id) },
-      },
-      orderBy: newestFirst,
-      select: {
-        subjectId: true,
-        gradeListId: true,
-        subject: { select: { name: true } },
-        gradeList: { select: { name: true, gradingSystemId: true } },
-      },
-    });
-    if (!latest) {
-      break;
+  for (const list of lists) {
+    const structured =
+      list.periodMode === "SEMESTERS" ||
+      list.subjects.some((subject) =>
+        subject.periods.some((period) => period.weightingMode === "PERCENTAGES"),
+      ) ||
+      list.entries.some((entry) => entry.groupId);
+    if (list.dashboardPreference?.includeInOverall) {
+      if (!structured) {
+        flat.set(list.gradingSystemId, [
+          ...(flat.get(list.gradingSystemId) ?? []),
+          ...list.entries,
+        ]);
+      } else if (list.periodMode !== "SEMESTERS") {
+        overall.set(
+          list.id,
+          gradeTrend(list.gradingSystemId, list.entries, (entries) =>
+            calculateList({ ...list, entries }),
+          ),
+        );
+      }
     }
-    subjects.push({
-      id: latest.subjectId,
-      name: latest.subject.name,
-      listId: latest.gradeListId,
-      listName: latest.gradeList.name,
-      systemId: latest.gradeList.gradingSystemId,
-      trend: await readRecentTrend(db, userId, latest.gradeList.gradingSystemId, {
-        subjectId: latest.subjectId,
-        gradeList: visibleLists,
-      }),
-    });
+    if (list.dashboardPreference?.showOnDashboard) {
+      for (const subject of list.subjects) {
+        let entries = list.entries.filter((entry) => entry.subjectId === subject.id);
+        const latest = entries.toSorted(
+          (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id),
+        )[0];
+        if (!latest) {
+          continue;
+        }
+        const position =
+          list.periodMode === "SEMESTERS"
+            ? (subject.periods.find((period) => period.id === latest.subjectPeriodId)?.period
+                .position ?? 0)
+            : 0;
+        if (list.periodMode === "SEMESTERS") {
+          if (!position) {
+            continue;
+          }
+          entries = entries.filter((entry) => entry.subjectPeriodId === latest.subjectPeriodId);
+        }
+        subjects.push({
+          id: subject.id,
+          name: subject.name,
+          listId: list.id,
+          listName: list.name,
+          systemId: list.gradingSystemId,
+          latest: latest.date,
+          trend: gradeTrend(
+            list.gradingSystemId,
+            entries,
+            structured ? (values) => calculateSubject(list, subject, values, position) : undefined,
+          ),
+        });
+      }
+    }
   }
-  return { overall, subjects };
+  for (const [systemId, entries] of flat) {
+    overall.set(systemId, gradeTrend(systemId, entries));
+  }
+  return {
+    overall,
+    subjects: subjects.sort((a, b) => b.latest.localeCompare(a.latest)).slice(0, 3),
+  };
 }

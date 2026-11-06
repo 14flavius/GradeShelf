@@ -22,6 +22,7 @@ export type DashboardEntry = {
   title: string;
   date: string;
   grade: number | null;
+  gradeText: string | null;
   weight: number;
   notePreview: string | null;
   gradeList: { name: string; gradingSystemId: GradingSystemId };

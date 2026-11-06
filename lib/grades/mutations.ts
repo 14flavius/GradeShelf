@@ -4,7 +4,12 @@ import { z } from "zod";
 import { Prisma, type PrismaClient } from "../../generated/prisma/client.ts";
 import { gradeCommandSchema } from "./commands.ts";
 import { gradeEntryInputSchema, normalizedGradeName } from "./validation.ts";
+import { ensurePeriods } from "./period-storage.ts";
+import { periodCount } from "./periods.ts";
+import { gradeEntryValueSchema } from "./systems.ts";
+import { parseTendency, tendencyText } from "./grade-input.ts";
 import { logEvent } from "../logger.mjs";
+import { defaultEntryWeight } from "./weighting.ts";
 
 type ValidatedGradeCommand = z.output<typeof gradeCommandSchema>;
 
@@ -62,6 +67,7 @@ async function createSetup(
     select: { id: true, name: true, weight: true },
   });
   const typeIds = new Set(command.data.existingTypeIds);
+  const orderedTypeIds = [...command.data.existingTypeIds];
   for (const type of command.data.types) {
     const matches = available.filter(
       (item) => normalizedGradeName(item.name) === normalizedGradeName(type.name),
@@ -72,17 +78,58 @@ async function createSetup(
     }
     const saved = reusable ?? (await tx.gradeType.create({ data: { ...type, userId } }));
     typeIds.add(saved.id);
+    orderedTypeIds.push(saved.id);
   }
   const list = await tx.gradeList.create({
     data: { ...command.data.list, id, userId, useAllGradeTypes: false },
   });
   await tx.subject.createMany({
     data: command.data.subjects.map((subject) => ({
-      ...subject,
+      name: subject.name,
+      isAdvanced: subject.isAdvanced ?? false,
       userId,
       gradeListId: list.id,
     })),
   });
+  await ensurePeriods(tx, list);
+  if (list.periodMode === "SEMESTERS") {
+    const subjects = await tx.subject.findMany({
+      where: { userId, gradeListId: list.id },
+      include: { periods: { include: { period: true } } },
+    });
+    for (const subject of subjects) {
+      const input = command.data.subjects.find((item) => item.name === subject.name);
+      if (!input) {
+        throw new GradeMutationError("INVALID_INPUT");
+      }
+      const weighting = input.weighting ?? command.data.semesterWeighting;
+      const shares =
+        weighting?.shares.map((item) => ({
+          gradeTypeId: orderedTypeIds[item.typeIndex],
+          share: item.share,
+        })) ?? [];
+      if (new Set(shares.map((item) => item.gradeTypeId)).size !== shares.length) {
+        throw new GradeMutationError("INVALID_INPUT");
+      }
+      for (const period of subject.periods) {
+        await tx.subjectPeriod.update({
+          where: { id: period.id, userId },
+          data: {
+            enrolled:
+              period.period.position === 0 ||
+              !input.enrolledPeriods ||
+              input.enrolledPeriods.includes(period.period.position),
+            weightingMode: weighting?.weightingMode ?? "ENTRIES",
+          },
+        });
+        if (shares.length) {
+          await tx.subjectGradeType.createMany({
+            data: shares.map((share) => ({ ...share, subjectPeriodId: period.id, userId })),
+          });
+        }
+      }
+    }
+  }
   await tx.gradeListType.createMany({
     data: [...typeIds].map((gradeTypeId) => ({ gradeTypeId, gradeListId: id, userId })),
   });
@@ -110,7 +157,8 @@ async function saveEntry(
   if (existing && existing.gradeListId !== list.id) {
     throw new GradeMutationError("INVALID_INPUT");
   }
-  const data = gradeEntryInputSchema(list.gradingSystemId, existing?.grade).parse(command.data);
+  const parsed = gradeEntryInputSchema(list.gradingSystemId, existing?.grade).parse(command.data);
+  const { newGroupName, gradeText: inputText, ...data } = parsed;
   const subject = await tx.subject.findFirst({
     where: { id: data.subjectId, gradeListId: list.id, userId },
     select: { id: true },
@@ -131,7 +179,76 @@ async function saveEntry(
   ) {
     throw new GradeMutationError("INVALID_INPUT");
   }
-  const weight = existing?.gradeTypeId === type.id ? existing.weight : type.weight;
+  const subjectPeriod = data.subjectPeriodId
+    ? await tx.subjectPeriod.findFirst({
+        where: { id: data.subjectPeriodId, subjectId: subject.id, gradeListId: list.id, userId },
+        include: { period: true },
+      })
+    : await tx.subjectPeriod.findFirst({
+        where: { subjectId: subject.id, gradeListId: list.id, userId, period: { position: 0 } },
+        include: { period: true },
+      });
+  if (
+    !subjectPeriod ||
+    !subjectPeriod.enrolled ||
+    subjectPeriod.period.position > periodCount(list.periodMode)
+  ) {
+    throw new GradeMutationError("INVALID_INPUT");
+  }
+  // Previously unassigned entries may be corrected without inventing a semester.
+  if (list.periodMode !== "NONE" && subjectPeriod.period.position === 0 && !existing) {
+    throw new GradeMutationError("INVALID_INPUT");
+  }
+  const settings =
+    list.periodMode === "SCHOOL_YEAR"
+      ? await tx.subjectPeriod.findFirst({
+          where: { subjectId: subject.id, userId, period: { position: 0 } },
+        })
+      : subjectPeriod;
+  if (
+    settings?.weightingMode === "PERCENTAGES" &&
+    !(await tx.subjectGradeType.findFirst({
+      where: { subjectPeriodId: settings.id, gradeTypeId: type.id, userId },
+    }))
+  ) {
+    throw new GradeMutationError("INVALID_INPUT");
+  }
+  let groupId = data.groupId ?? null;
+  if (
+    groupId &&
+    !(await tx.gradeGroup.findFirst({
+      where: { id: groupId, userId, subjectPeriodId: subjectPeriod.id, gradeTypeId: type.id },
+    }))
+  ) {
+    throw new GradeMutationError("INVALID_INPUT");
+  }
+  if (newGroupName) {
+    if (groupId) {
+      throw new GradeMutationError("INVALID_INPUT");
+    }
+    const group = await tx.gradeGroup.create({
+      data: {
+        userId,
+        subjectPeriodId: subjectPeriod.id,
+        gradeTypeId: type.id,
+        name: newGroupName,
+        weight: 1,
+      },
+    });
+    groupId = group.id;
+  }
+  const rawGrade = z.object({ grade: z.unknown().optional() }).parse(command.data).grade;
+  const text = tendencyText(inputText ?? rawGrade);
+  const gradeText =
+    list.gradingSystemId === "de_school_extended_v1" && text && parseTendency(text) === data.grade
+      ? text
+      : null;
+  const weight =
+    data.weight ??
+    (existing?.gradeTypeId === type.id
+      ? existing.weight
+      : defaultEntryWeight(type.weight, settings?.weightingMode));
+  const payload = { ...data, subjectPeriodId: subjectPeriod.id, groupId, gradeText };
   // Notes and corrections keep the recording order. Clearing then re-entering
   // a grade starts a new grading time, including when the grade is zero.
   const gradedAt =
@@ -143,9 +260,9 @@ async function saveEntry(
   const saved = existing
     ? await tx.gradeEntry.update({
         where: { id: existing.id, userId },
-        data: { ...data, weight, gradedAt },
+        data: { ...payload, weight, gradedAt },
       })
-    : await tx.gradeEntry.create({ data: { ...data, weight, gradedAt, userId } });
+    : await tx.gradeEntry.create({ data: { ...payload, weight, gradedAt, userId } });
   if (data.grade !== null && !list.gradingSystemLockedAt) {
     await tx.gradeList.update({
       where: { id: list.id, userId },
@@ -182,6 +299,7 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
         case "list.create": {
           const { preferences, ...data } = command.data;
           const list = await tx.gradeList.create({ data: { ...data, userId } });
+          await ensurePeriods(tx, list);
           await tx.dashboardPreference.create({
             data: { gradeListId: list.id, userId, ...preferences },
           });
@@ -191,6 +309,10 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
           const list = await ownedList(tx, userId, command.id);
           if (
             list.gradingSystemId !== command.data.gradingSystemId &&
+            !(
+              list.gradingSystemId === "de_school_v1" &&
+              command.data.gradingSystemId === "de_school_extended_v1"
+            ) &&
             (list.gradingSystemLockedAt ||
               (await tx.gradeEntry.count({
                 where: { gradeListId: list.id, userId, grade: { not: null } },
@@ -199,7 +321,28 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
             throw new GradeMutationError("SCALE_LOCKED");
           }
           const { preferences, ...data } = command.data;
-          await tx.gradeList.update({ where: { id: list.id, userId }, data });
+          if (data.periodMode && data.periodMode !== list.periodMode) {
+            const used = await tx.subjectPeriod.count({
+              where: {
+                userId,
+                gradeListId: list.id,
+                period: {
+                  position: { gt: list.periodMode === "NONE" ? periodCount(data.periodMode) : 0 },
+                },
+                OR: [
+                  { entries: { some: { userId } } },
+                  { finalGrade: { not: null } },
+                  { groups: { some: { userId } } },
+                  { shares: { some: { userId } } },
+                ],
+              },
+            });
+            if (used) {
+              throw new GradeMutationError("IN_USE");
+            }
+          }
+          const updated = await tx.gradeList.update({ where: { id: list.id, userId }, data });
+          await ensurePeriods(tx, updated);
           if (preferences) {
             await tx.dashboardPreference.upsert({
               where: { gradeListId_userId: { gradeListId: list.id, userId } },
@@ -226,6 +369,18 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
         case "list.types": {
           await ownedList(tx, userId, command.id);
           await assertOwnedTypes(tx, userId, command.data.gradeTypeIds);
+          if (
+            !command.data.useAllGradeTypes &&
+            (await tx.subjectGradeType.count({
+              where: {
+                userId,
+                subjectPeriod: { gradeListId: command.id },
+                gradeTypeId: { notIn: command.data.gradeTypeIds },
+              },
+            }))
+          ) {
+            throw new GradeMutationError("IN_USE");
+          }
           await tx.gradeList.update({
             where: { id: command.id, userId },
             data: { useAllGradeTypes: command.data.useAllGradeTypes },
@@ -292,8 +447,9 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
           return { id: command.id };
         }
         case "subject.create": {
-          await ownedList(tx, userId, command.data.gradeListId);
+          const list = await ownedList(tx, userId, command.data.gradeListId);
           const subject = await tx.subject.create({ data: { ...command.data, userId } });
+          await ensurePeriods(tx, list);
           return { id: subject.id };
         }
         case "subject.update":
@@ -315,6 +471,125 @@ export async function applyGradeMutation(db: PrismaClient, userId: string, input
             await tx.subject.delete({ where: { id: subject.id, userId } });
           }
           return { id: subject.id };
+        }
+        case "period.update": {
+          const period = await tx.subjectPeriod.findFirst({
+            where: { id: command.id, userId },
+            include: { period: true },
+          });
+          if (!period) {
+            throw new GradeMutationError("NOT_FOUND");
+          }
+          const list = await ownedList(tx, userId, period.gradeListId);
+          const { shares, ...data } = command.data;
+          if (
+            period.period.position > periodCount(list.periodMode) ||
+            (period.period.position === 0 && !data.enrolled)
+          ) {
+            throw new GradeMutationError("INVALID_INPUT");
+          }
+          await assertOwnedTypes(
+            tx,
+            userId,
+            shares.map((share) => share.gradeTypeId),
+          );
+          if (!list.useAllGradeTypes && shares.length) {
+            const allowed = await tx.gradeListType.count({
+              where: {
+                userId,
+                gradeListId: list.id,
+                gradeTypeId: { in: shares.map((share) => share.gradeTypeId) },
+              },
+            });
+            if (allowed !== shares.length) {
+              throw new GradeMutationError("INVALID_INPUT");
+            }
+          }
+          if (
+            !data.enrolled &&
+            (data.finalGrade !== null ||
+              (await tx.gradeEntry.count({ where: { userId, subjectPeriodId: period.id } })))
+          ) {
+            throw new GradeMutationError("IN_USE");
+          }
+          if (
+            list.periodMode === "SEMESTERS" &&
+            period.period.position === 0 &&
+            data.finalGrade !== null
+          ) {
+            throw new GradeMutationError("INVALID_INPUT");
+          }
+          if (data.finalGrade !== null) {
+            gradeEntryValueSchema(list.gradingSystemId).parse(data.finalGrade);
+          }
+          if (
+            list.periodMode === "SCHOOL_YEAR" &&
+            period.period.position > 0 &&
+            data.weightingMode !== "ENTRIES"
+          ) {
+            throw new GradeMutationError("INVALID_INPUT");
+          }
+          if (data.weightingMode === "PERCENTAGES") {
+            const unmatched = await tx.gradeEntry.count({
+              where: {
+                userId,
+                subjectId: period.subjectId,
+                ...(list.periodMode === "SCHOOL_YEAR" ? {} : { subjectPeriodId: period.id }),
+                gradeTypeId: { notIn: shares.map((share) => share.gradeTypeId) },
+              },
+            });
+            if (unmatched) {
+              throw new GradeMutationError("IN_USE");
+            }
+          }
+          await tx.subjectPeriod.update({ where: { id: period.id }, data });
+          await tx.subjectGradeType.deleteMany({ where: { subjectPeriodId: period.id, userId } });
+          if (shares.length) {
+            await tx.subjectGradeType.createMany({
+              data: shares.map((share) => ({ ...share, subjectPeriodId: period.id, userId })),
+            });
+          }
+          if (data.finalGrade !== null && !list.gradingSystemLockedAt) {
+            await tx.gradeList.update({
+              where: { id: list.id, userId },
+              data: { gradingSystemLockedAt: new Date() },
+            });
+          }
+          return { id: period.id };
+        }
+        case "group.update":
+        case "group.delete": {
+          const group = await tx.gradeGroup.findFirst({
+            where: { id: command.id, userId },
+            include: { subjectPeriod: true },
+          });
+          if (!group) {
+            throw new GradeMutationError("NOT_FOUND");
+          }
+          await ownedList(tx, userId, group.subjectPeriod.gradeListId);
+          if (command.action === "group.update") {
+            if (
+              command.data.subjectPeriodId !== group.subjectPeriodId ||
+              command.data.gradeTypeId !== group.gradeTypeId
+            ) {
+              throw new GradeMutationError("INVALID_INPUT");
+            }
+            await tx.gradeGroup.update({
+              where: { id: group.id, userId },
+              data: { name: command.data.name, weight: command.data.weight },
+            });
+            await tx.gradeEntry.updateMany({
+              where: { userId, groupId: group.id },
+              data: { updatedAt: new Date() },
+            });
+          } else {
+            await tx.gradeEntry.updateMany({
+              where: { userId, groupId: group.id },
+              data: { groupId: null },
+            });
+            await tx.gradeGroup.delete({ where: { id: group.id, userId } });
+          }
+          return { id: group.id };
         }
         case "type.create": {
           const types = await tx.gradeType.findMany({ where: { userId }, select: { name: true } });

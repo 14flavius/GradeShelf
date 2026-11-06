@@ -10,16 +10,19 @@ export const calendarEntrySelect = {
   title: true,
   date: true,
   grade: true,
+  gradeText: true,
+  subjectPeriod: { select: { period: { select: { position: true } } } },
+  group: { select: { name: true } },
   weight: true,
   note: true,
   createdAt: true,
   updatedAt: true,
-  gradeList: { select: { name: true, gradingSystemId: true, updatedAt: true } },
+  gradeList: { select: { name: true, gradingSystemId: true, periodMode: true, updatedAt: true } },
   subject: { select: { name: true, updatedAt: true } },
   gradeType: { select: { name: true, updatedAt: true } },
 } as const;
 
-export const calendarSettingsSelect = {
+const calendarSettingsSelect = {
   name: true,
   titleTemplate: true,
   descriptionTemplate: true,

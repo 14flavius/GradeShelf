@@ -44,7 +44,7 @@ export async function fetchSsoJson(url: string, init: RequestInit = {}) {
   return JSON.parse(bytes.toString("utf8")) as unknown;
 }
 
-export async function discoverSso(issuer: string) {
+async function discoverSso(issuer: string) {
   try {
     const data = discoverySchema.parse(
       await fetchSsoJson(`${issuer.replace(/\/$/, "")}/.well-known/openid-configuration`),

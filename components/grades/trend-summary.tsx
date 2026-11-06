@@ -28,10 +28,10 @@ export function TrendSummary({
   const compared = points.length >= 2;
   const last = points.at(-1);
   const count = last ? last.position - last.firstPosition + 1 : 0;
-  const currentLabel = t.trendCurrent.replace(
-    "{count}",
-    new Intl.NumberFormat(locale).format(count),
-  );
+  const method = trend.cumulative ? t.trendCumulativeHelp : t.trendMethod;
+  const currentLabel = trend.cumulative
+    ? t.currentAverage
+    : t.trendCurrent.replace("{count}", new Intl.NumberFormat(locale).format(count));
   return (
     <div
       className={
@@ -51,7 +51,7 @@ export function TrendSummary({
               average={{ value: trend.current, gradedCount: count }}
               systemId={systemId}
               locale={locale}
-              label="trendRecentAverage"
+              label={trend.cumulative ? "currentAverage" : "trendRecentAverage"}
             />
           </div>
         )}
@@ -85,20 +85,27 @@ export function TrendSummary({
             )}
           </p>
           {compared ? (
-            <p className="text-[11px] leading-relaxed text-muted-foreground" title={t.trendMethod}>
+            <p className="text-[11px] leading-relaxed text-muted-foreground" title={method}>
               <span className="font-medium tabular-nums">
                 {formatAverage(points[0].value, locale)} →{" "}
                 {formatAverage(points[points.length - 1].value, locale)}
               </span>
               <span> · {t.trendVisibleRange}</span>
-              <span className="sr-only">. {t.trendMethod}</span>
+              <span className="sr-only">. {method}</span>
             </p>
           ) : (
             <p className="text-xs leading-relaxed text-muted-foreground">{t.trendMinimum}</p>
           )}
         </div>
       </div>
-      {compared && <TrendChart points={points} systemId={systemId} locale={locale} />}
+      {compared && (
+        <TrendChart
+          cumulative={trend.cumulative}
+          points={points}
+          systemId={systemId}
+          locale={locale}
+        />
+      )}
     </div>
   );
 }

@@ -38,7 +38,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3>Grades &amp; averages</h3>
-      <p>Organize lists, subjects and grade types. Set weights, track averages and choose from nine grading scales.</p>
+      <p>Use simple grades, fixed percentage shares or grouped assessments. Choose a grading scale per list, with optional school-year halves or four upper-secondary semesters.</p>
     </td>
     <td width="50%" valign="top">
       <h3>Exam planning</h3>
@@ -66,6 +66,11 @@
     </td>
   </tr>
 </table>
+
+Normal grade lists keep their existing calculation. Upper-secondary lists track calculated
+averages and received final grades separately. Different scales are never combined.
+The optional target calculator shows what one additional grade would need to achieve.
+See the [changelog](CHANGELOG.md) for release notes.
 
 ## Installation
 
@@ -109,14 +114,18 @@ including two-factor authentication, are under **Settings**.
 
 ### Update
 
-From your installation directory, back up and update:
+Customized installations with subject categories and course half-years must use the
+[import procedure below](#import-a-customized-installation) before starting the new version.
+
+For regular installations, back up and update from your installation directory:
 
 ```sh
 sh scripts/backup.sh && docker compose pull && docker compose up -d --wait
 ```
 
-Keep your existing `.env` and `data/` directory. Database migrations run
-automatically on startup. If you pin an image version, update `GRADESHELF_IMAGE`
+Keep your existing `.env` and `data/` directory. Regular installations keep their
+accounts, grades and attachments; database migrations run automatically on startup.
+If you pin an image version, update `GRADESHELF_IMAGE`
 first. New images are available once the [release build](https://github.com/14flavius/GradeShelf/actions/workflows/docker-publish.yml) finishes.
 
 ### Back up
@@ -144,6 +153,24 @@ Docker image alone does not undo database migrations.
 
 </details>
 
+### Import a customized installation
+
+The importer supports the customized v1.2.0 schema with subject categories, grade groups
+and four course half-years. Stop the old instance and back up its data and configuration.
+From a v1.3.0 [development checkout](#development), preview the import:
+
+```sh
+npm run import:legacy -- --source /path/to/source-data --target /path/to/new-data
+```
+
+Add `--apply` to import into a **new, nonexistent directory**. The source stays unchanged;
+accounts and attachments are retained. Use the standard Compose configuration with the
+imported directory mounted at `/data` and keep the existing `BETTER_AUTH_SECRET`. Remove
+old `app-custom` mounts that replace application files, then start v1.3.0.
+Review any unassigned periods or types; final grades are not inferred from averages.
+Invalid weights or relationships stop the import. The source database and uploads are
+required; SQL migration scripts alone do not contain your data.
+
 ## Configuration
 
 Edit `.env` in your installation directory, then apply changes:
@@ -157,7 +184,7 @@ docker compose up -d --pull never --wait
 | `BETTER_AUTH_URL` | Full browser URL, such as `https://grades.example.com`. Subpaths are not supported. |
 | `PORT` | Published HTTP port on the host, usually `3000`. |
 | `BIND_ADDRESS` | `127.0.0.1` for local access or a proxy on the same host; `0.0.0.0` for LAN access. |
-| `GRADESHELF_IMAGE` | Optional fixed image, e.g. `ghcr.io/14flavius/gradeshelf:1.2.0`. Defaults to `latest`. |
+| `GRADESHELF_IMAGE` | Optional fixed image, e.g. `ghcr.io/14flavius/gradeshelf:1.3.0`. Defaults to `latest`. |
 
 Keep the generated `BETTER_AUTH_SECRET` and `COMPOSE_PROJECT_NAME` unchanged.
 For HTTPS, terminate TLS at your reverse proxy and forward to GradeShelf's HTTP

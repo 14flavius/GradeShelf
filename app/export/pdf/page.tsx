@@ -1,3 +1,4 @@
+import { periodCount, periodLabel } from "@/lib/grades/periods";
 import { settingsSections } from "@/lib/settings-sections";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,7 +7,12 @@ import { requireUser } from "@/lib/auth/server";
 import { getDb } from "@/lib/db";
 import { readExport } from "@/lib/export/service";
 import { getRequestMessages } from "@/lib/i18n/server";
-import { formatAverage, overallAverages, weightedAverage } from "@/lib/grades/averages";
+import {
+  formatAverage,
+  overallAverages,
+  calculateList,
+  calculateSubject,
+} from "@/lib/grades/averages";
 import { formatCalendarDate } from "@/lib/grades/dates";
 import { formatGrade, gradingSystems } from "@/lib/grades/systems";
 import { PrintReport } from "@/components/settings/print-report";
@@ -36,7 +42,25 @@ export default async function PdfReportPage() {
     ...list,
     dashboardPreference:
       data.dashboardPreferences.find((preference) => preference.gradeListId === list.id) ?? null,
-    entries: data.gradeEntries.filter((entry) => entry.gradeListId === list.id),
+    subjects: data.subjects
+      .filter((subject) => subject.gradeListId === list.id)
+      .map((subject) => ({
+        ...subject,
+        periods: data.subjectPeriods
+          .filter((period) => period.subjectId === subject.id)
+          .map((period) => ({
+            ...period,
+            period: data.gradePeriods.find((item) => item.id === period.periodId)!,
+            shares: data.subjectGradeTypes.filter((share) => share.subjectPeriodId === period.id),
+          }))
+          .filter((period) => period.period.position <= periodCount(list.periodMode)),
+      })),
+    entries: data.gradeEntries
+      .filter((entry) => entry.gradeListId === list.id)
+      .map((entry) => ({
+        ...entry,
+        group: data.gradeGroups.find((group) => group.id === entry.groupId) ?? null,
+      })),
   }));
   const overall = overallAverages(lists);
   return (
@@ -81,9 +105,9 @@ export default async function PdfReportPage() {
         <section className={styles.overall} aria-label={t.overallAverages}>
           <h2>{t.overallAverage}</h2>
           {overall.length ? (
-            overall.map(({ systemId, average }) => (
-              <p key={systemId}>
-                {t[gradingSystems[systemId].labelKey]}{" "}
+            overall.map(({ key, name, systemId, average }) => (
+              <p key={key}>
+                {name ?? t[gradingSystems[systemId].labelKey]}{" "}
                 <strong>
                   {average.value === null ? "—" : formatAverage(average.value, user.locale)}
                 </strong>
@@ -96,10 +120,8 @@ export default async function PdfReportPage() {
         </section>
         {lists.length === 0 && <p>{t.emptyLists}</p>}
         {lists.map((list, index) => {
-          const average = weightedAverage(list.gradingSystemId, list.entries);
-          const subjects = data.subjects
-            .filter((subject) => subject.gradeListId === list.id)
-            .sort((a, b) => a.name.localeCompare(b.name, user.locale));
+          const average = calculateList(list);
+          const subjects = list.subjects.sort((a, b) => a.name.localeCompare(b.name, user.locale));
           return (
             <section key={list.id} className={styles.list}>
               <header className={styles.listHeader}>
@@ -114,6 +136,14 @@ export default async function PdfReportPage() {
                   </p>
                 </div>
                 <p className={styles.muted}>{t[gradingSystems[list.gradingSystemId].labelKey]}</p>
+                <p className={styles.muted}>
+                  {average.basis === "PERIODS"
+                    ? t.periodAverage
+                    : average.basis === "SUBJECTS"
+                      ? t.subjectAverage
+                      : t.entryAverage}
+                  {average.incomplete ? ` · ${t.incompleteAverage}` : ""}
+                </p>
                 {list.description && <p className={styles.note}>{list.description}</p>}
                 <p className={styles.muted}>
                   {t.showOnDashboard}:{" "}
@@ -136,7 +166,7 @@ export default async function PdfReportPage() {
                       (b.gradedAt?.getTime() ?? 0) - (a.gradedAt?.getTime() ?? 0) ||
                       a.id.localeCompare(b.id),
                   );
-                const average = weightedAverage(list.gradingSystemId, entries);
+                const average = calculateSubject(list, subject, entries);
                 return (
                   <section key={subject.id} className={styles.subject}>
                     <h3>
@@ -145,6 +175,28 @@ export default async function PdfReportPage() {
                         Ø {average.value === null ? "—" : formatAverage(average.value, user.locale)}
                       </span>
                     </h3>
+                    <p className={styles.muted}>
+                      {average.basis === "PERIODS"
+                        ? t.periodAverage
+                        : average.basis === "TYPES"
+                          ? t.typeAverage
+                          : t.entryAverage}
+                      {average.incomplete ? ` · ${t.incompleteAverage}` : ""}
+                    </p>
+                    {subject.periods
+                      .filter(
+                        (period) =>
+                          period.enrolled &&
+                          (period.period.position > 0 || period.finalGrade !== null),
+                      )
+                      .map((period) => (
+                        <p key={period.id} className={styles.muted}>
+                          {periodLabel(period.period.position, t)} · {t.finalGrade}:{" "}
+                          {period.finalGrade === null
+                            ? "—"
+                            : formatGrade(period.finalGrade, list.gradingSystemId, user.locale)}
+                        </p>
+                      ))}
                     {!entries.length ? (
                       <p className={styles.muted}>{t.emptyEntries}</p>
                     ) : (
@@ -175,6 +227,19 @@ export default async function PdfReportPage() {
                                 <td>{formatCalendarDate(entry.date, user.locale)}</td>
                                 <td>
                                   <strong>{entry.title}</strong>
+                                  {list.periodMode !== "NONE" && (
+                                    <div className={styles.muted}>
+                                      {periodLabel(
+                                        subject.periods.find(
+                                          (period) => period.id === entry.subjectPeriodId,
+                                        )?.period.position ?? 0,
+                                        t,
+                                      )}
+                                    </div>
+                                  )}
+                                  {entry.group && (
+                                    <div className={styles.muted}>{entry.group.name}</div>
+                                  )}
                                 </td>
                                 <td>{types.get(entry.gradeTypeId)?.name}</td>
                                 <td>{format.format(entry.weight)}</td>
@@ -182,7 +247,12 @@ export default async function PdfReportPage() {
                                   <strong>
                                     {entry.grade === null
                                       ? "—"
-                                      : formatGrade(entry.grade, list.gradingSystemId, user.locale)}
+                                      : formatGrade(
+                                          entry.grade,
+                                          list.gradingSystemId,
+                                          user.locale,
+                                          entry.gradeText,
+                                        )}
                                   </strong>
                                 </td>
                               </tr>

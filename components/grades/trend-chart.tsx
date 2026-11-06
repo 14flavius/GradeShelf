@@ -18,15 +18,18 @@ import { formatCalendarDate } from "@/lib/grades/dates";
 import { formatGrade, gradePoints, gradingSystems } from "@/lib/grades/systems";
 
 export function TrendChart({
+  cumulative = false,
   points,
   systemId,
   locale,
 }: {
+  cumulative?: boolean;
   points: ReturnType<typeof gradeTrend>["points"];
   systemId: GradingSystemId;
   locale: Locale;
 }) {
   const t = messages[locale];
+  const averageLabel = cumulative ? t.currentAverage : t.trendPointAverage;
   const id = useId();
   const figure = useRef<HTMLElement>(null);
   const control = useRef<HTMLButtonElement>(null);
@@ -53,7 +56,7 @@ export function TrendChart({
       .replace("{from}", format.format(point.firstPosition))
       .replace("{to}", format.format(point.position));
   const pointLabel = (point: (typeof points)[number]) =>
-    `${positionLabel(point.position)} · ${point.title} · ${formatCalendarDate(point.date, locale)} · ${t.gradeValue}: ${formatGrade(point.grade, systemId, locale)} · ${t.weight}: ${format.format(point.weight)} · ${t.trendPointAverage}: ${formatAverage(point.value, locale)} · ${windowLabel(point)}`;
+    `${positionLabel(point.position)} · ${point.title} · ${formatCalendarDate(point.date, locale)} · ${t.gradeValue}: ${formatGrade(point.grade, systemId, locale, point.gradeText)} · ${t.weight}: ${format.format(point.weight)} · ${averageLabel}: ${formatAverage(point.value, locale)} · ${windowLabel(point)}`;
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -142,7 +145,7 @@ export function TrendChart({
       <div ref={plot} className="relative">
         <svg
           role="img"
-          aria-label={t.trendChart}
+          aria-label={cumulative ? t.trendCumulativeChart : t.trendChart}
           data-grade-chart
           viewBox="0 0 360 136"
           width="360"
@@ -254,7 +257,7 @@ export function TrendChart({
               <div>
                 <dt className="text-muted-foreground">{t.gradeValue}</dt>
                 <dd className="mt-1 text-sm font-semibold tabular-nums">
-                  {formatGrade(active.grade, systemId, locale)}
+                  {formatGrade(active.grade, systemId, locale, active.gradeText)}
                 </dd>
               </div>
               <div>
@@ -265,7 +268,7 @@ export function TrendChart({
               </div>
               <div className="col-span-2 flex items-center justify-between gap-3 border-t border-border/60 pt-2">
                 <dt>
-                  {t.trendPointAverage}
+                  {averageLabel}
                   <span className="mt-1 block text-[11px] text-muted-foreground">
                     {windowLabel(active)}
                   </span>
@@ -292,13 +295,13 @@ export function TrendChart({
       <figcaption className="mt-4 flex flex-wrap justify-between gap-x-3 gap-y-1 text-[11px] leading-relaxed text-muted-foreground">
         <p className="flex items-center gap-1.5">
           <span aria-hidden="true" className="h-0.5 w-3 shrink-0 rounded-full bg-primary" />
-          {t.trendChartLegend}
+          {cumulative ? t.trendCumulativeLegend : t.trendChartLegend}
         </p>
         <p id={`${id}-help`}>
           {t.trendInteract}
           <span className="sr-only"> {t.trendKeyboard}</span>
         </p>
-        <p className="w-full">{t.trendWindowHelp}</p>
+        <p className="w-full">{cumulative ? t.trendCumulativeHelp : t.trendWindowHelp}</p>
       </figcaption>
     </figure>
   );

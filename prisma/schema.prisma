@@ -162,6 +162,7 @@ enum GradeListStatus {
 // Definitions live in lib/grades/systems.ts. Existing versions must not change meaning.
 enum GradingSystemId {
   de_school_v1
+  de_school_extended_v1
   school_1_5_v1
   ascending_1_6_v1
   upper_secondary_15_v1
@@ -172,6 +173,17 @@ enum GradingSystemId {
   us_letters_4_v1
 }
 
+enum PeriodMode {
+  NONE
+  SCHOOL_YEAR
+  SEMESTERS
+}
+
+enum WeightingMode {
+  ENTRIES
+  PERCENTAGES
+}
+
 model GradeList {
   id                    String               @id @default(cuid())
   userId                String
@@ -180,6 +192,8 @@ model GradeList {
   description           String?
   status                GradeListStatus      @default(ACTIVE)
   gradingSystemId       GradingSystemId
+  periodMode            PeriodMode           @default(NONE)
+  periods               GradePeriod[]
   useAllGradeTypes      Boolean              @default(true)
   // A partial unique index in the migration allows one default per user.
   isDefault             Boolean              @default(false)
@@ -209,6 +223,8 @@ model Subject {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   entries     GradeEntry[]
+  isAdvanced  Boolean @default(false)
+  periods     SubjectPeriod[]
 
   @@unique([id, gradeListId, userId])
   @@index([userId, gradeListId])
@@ -225,6 +241,8 @@ model GradeType {
   updatedAt DateTime     @updatedAt
   entries   GradeEntry[]
   gradeLists GradeListType[]
+  shares     SubjectGradeType[]
+  groups     GradeGroup[]
 
   @@unique([id, userId])
   @@index([userId])
@@ -253,6 +271,11 @@ model GradeEntry {
   subject     Subject      @relation(fields: [subjectId, gradeListId, userId], references: [id, gradeListId, userId], onDelete: Restrict, onUpdate: Restrict)
   gradeTypeId String
   gradeType   GradeType    @relation(fields: [gradeTypeId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  subjectPeriodId String?
+  subjectPeriod SubjectPeriod? @relation(fields: [subjectPeriodId, subjectId, gradeListId, userId], references: [id, subjectId, gradeListId, userId], onDelete: Restrict, onUpdate: Restrict)
+  groupId String?
+  group GradeGroup? @relation(fields: [groupId, subjectPeriodId, gradeTypeId, userId], references: [id, subjectPeriodId, gradeTypeId, userId], onDelete: Restrict, onUpdate: Restrict)
+  gradeText String?
   title       String
   // Calendar date, YYYY-MM-DD; never an implicit UTC/local-time conversion.
   date        String
@@ -353,4 +376,68 @@ model CalendarFeedList {
   @@id([feedId, gradeListId, userId])
   @@index([userId, gradeListId])
   @@map("calendarFeedList")
+}
+
+// Position 0 holds whole-list settings; positions 1+ are visible periods.
+model GradePeriod {
+  id String @id @default(cuid())
+  userId String
+  gradeListId String
+  gradeList GradeList @relation(fields: [gradeListId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+  position Int
+  subjects SubjectPeriod[]
+
+  @@unique([id, gradeListId, userId])
+  @@unique([gradeListId, position, userId])
+  @@map("gradePeriod")
+}
+
+model SubjectPeriod {
+  id String @id @default(cuid())
+  userId String
+  gradeListId String
+  subjectId String
+  subject Subject @relation(fields: [subjectId, gradeListId, userId], references: [id, gradeListId, userId], onDelete: Cascade, onUpdate: Restrict)
+  periodId String
+  period GradePeriod @relation(fields: [periodId, gradeListId, userId], references: [id, gradeListId, userId], onDelete: Cascade, onUpdate: Restrict)
+  enrolled Boolean @default(true)
+  weightingMode WeightingMode @default(ENTRIES)
+  finalGrade Float?
+  shares SubjectGradeType[]
+  groups GradeGroup[]
+  entries GradeEntry[]
+
+  @@unique([id, userId])
+  @@unique([id, subjectId, gradeListId, userId])
+  @@unique([subjectId, periodId, userId])
+  @@map("subjectPeriod")
+}
+
+model SubjectGradeType {
+  subjectPeriodId String
+  gradeTypeId String
+  userId String
+  subjectPeriod SubjectPeriod @relation(fields: [subjectPeriodId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+  gradeType GradeType @relation(fields: [gradeTypeId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  // Integer hundredths of a percent; the configured shares sum to 10000.
+  share Int
+
+  @@id([subjectPeriodId, gradeTypeId, userId])
+  @@map("subjectGradeType")
+}
+
+model GradeGroup {
+  id String @id @default(cuid())
+  userId String
+  subjectPeriodId String
+  subjectPeriod SubjectPeriod @relation(fields: [subjectPeriodId, userId], references: [id, userId], onDelete: Cascade, onUpdate: Restrict)
+  gradeTypeId String
+  gradeType GradeType @relation(fields: [gradeTypeId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  name String
+  weight Float @default(1)
+  entries GradeEntry[]
+
+  @@unique([id, userId])
+  @@unique([id, subjectPeriodId, gradeTypeId, userId])
+  @@map("gradeGroup")
 }

@@ -5,7 +5,9 @@ import { useLanguage } from "@/components/i18n/provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
-import { gradingSystems } from "@/lib/grades/systems";
+import { ListSettingsFields } from "./list-settings-fields";
+import type { ListSettings } from "@/lib/grades/profiles";
+import type { PeriodMode } from "@/generated/prisma/enums";
 import { gradeCommandSchema } from "@/lib/grades/commands";
 import type { GradingSystemId } from "@/generated/prisma/enums";
 import { controlClass, FormField, MutationError } from "./form-parts";
@@ -20,6 +22,7 @@ type EditorProps =
         name: string;
         description: string | null;
         gradingSystemId: GradingSystemId;
+        periodMode: PeriodMode;
         locked: boolean;
         preferences: { showOnDashboard: boolean; includeInOverall: boolean };
       };
@@ -27,7 +30,8 @@ type EditorProps =
   | {
       kind: "subject";
       gradeListId: string;
-      value?: { id: string; name: string; color: string | null };
+      showCourseType?: boolean;
+      value?: { id: string; name: string; color: string | null; isAdvanced?: boolean };
     }
   | { kind: "type"; value?: { id: string; name: string; weight: number } };
 
@@ -50,35 +54,43 @@ export function EntityEditor(props: EditorProps) {
   );
 }
 
-function readEntityData(props: EditorProps, form: FormData) {
+function readEntityData(props: EditorProps, form: FormData, settings: ListSettings) {
   const name = form.get("name");
   switch (props.kind) {
     case "list":
       return {
         name,
         description: form.get("description"),
-        gradingSystemId: props.value?.locked
-          ? props.value.gradingSystemId
-          : form.get("gradingSystemId"),
+        ...settings,
         preferences: {
           showOnDashboard: form.has("showOnDashboard"),
           includeInOverall: form.has("includeInOverall"),
         },
       };
     case "subject":
-      return { name, gradeListId: props.gradeListId, color: form.get("color") || null };
+      return {
+        name,
+        gradeListId: props.gradeListId,
+        color: form.get("color") || null,
+        ...(props.showCourseType ? { isAdvanced: form.has("isAdvanced") } : {}),
+      };
     case "type":
       return { name, weight: form.get("weight") };
   }
 }
 
-export function EditorForm(props: EditorProps & { title: string; onClose: () => void }) {
+function EditorForm(props: EditorProps & { title: string; onClose: () => void }) {
   const { t, locale } = useLanguage();
   const mutation = useGradeMutation();
+  const [settings, setSettings] = useState<ListSettings>({
+    gradingSystemId:
+      props.kind === "list" ? (props.value?.gradingSystemId ?? "de_school_v1") : "de_school_v1",
+    periodMode: props.kind === "list" ? (props.value?.periodMode ?? "NONE") : "NONE",
+  });
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const data = readEntityData(props, form);
+    const data = readEntityData(props, form, settings);
     const command = gradeCommandSchema.safeParse({
       action: `${props.kind}.${props.value ? "update" : "create"}`,
       ...(props.value ? { id: props.value.id } : {}),
@@ -121,30 +133,13 @@ export function EditorForm(props: EditorProps & { title: string; onClose: () => 
                   defaultValue={props.value?.description ?? ""}
                 />
               </FormField>
-              <div className="space-y-2">
-                <FormField label={t.gradingSystem}>
-                  <select
-                    className={controlClass}
-                    name="gradingSystemId"
-                    required
-                    defaultValue={props.value?.gradingSystemId ?? ""}
-                    disabled={props.value?.locked}
-                    aria-describedby="list-scale-help"
-                  >
-                    <option value="" disabled>
-                      {t.choose}
-                    </option>
-                    {Object.entries(gradingSystems).map(([id, system]) => (
-                      <option key={id} value={id}>
-                        {t[system.labelKey]}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-                <p id="list-scale-help" className="text-xs leading-relaxed text-muted-foreground">
-                  {props.value?.locked ? t.scaleLocked : t.scaleHelp}
-                </p>
-              </div>
+              <ListSettingsFields
+                value={settings}
+                onChange={setSettings}
+                canExtend={props.value?.gradingSystemId === "de_school_v1"}
+                locked={props.value?.locked}
+                creating={!props.value}
+              />
               <fieldset className="space-y-2 pt-1">
                 <legend className="mb-1 text-sm font-medium">{t.dashboardSettings}</legend>
                 <div className="divide-y divide-border/50 rounded-xl bg-muted/35">
@@ -195,7 +190,22 @@ export function EditorForm(props: EditorProps & { title: string; onClose: () => 
               </fieldset>
             </>
           )}
-          {props.kind === "subject" && <SubjectColorPicker defaultValue={props.value?.color} />}
+          {props.kind === "subject" && (
+            <>
+              <SubjectColorPicker defaultValue={props.value?.color} />
+              {props.showCourseType && (
+                <label className="flex items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    name="isAdvanced"
+                    defaultChecked={props.value?.isAdvanced}
+                    className="size-4 accent-primary"
+                  />
+                  {t.advancedCourse}
+                </label>
+              )}
+            </>
+          )}
           {props.kind === "type" && (
             <>
               <FormField label={t.weight}>

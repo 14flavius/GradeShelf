@@ -42,7 +42,12 @@ export function DashboardEntryList({
               {entry.grade !== null ? (
                 <>
                   <span className="text-xl font-semibold tabular-nums">
-                    {formatGrade(entry.grade, entry.gradeList.gradingSystemId, locale)}
+                    {formatGrade(
+                      entry.grade,
+                      entry.gradeList.gradingSystemId,
+                      locale,
+                      entry.gradeText,
+                    )}
                   </span>
                   <span className="text-[10px] text-muted-foreground">{unit}</span>
                 </>

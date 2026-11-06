@@ -31,7 +31,9 @@ export default async function DashboardPage() {
   ]);
   const format = new Intl.NumberFormat(user.locale);
   const hasActiveLists = choices.lists.length > 0;
-  const overallProgress = data.overall.filter(({ average }) => average.gradedCount >= 2);
+  const overallProgress = data.overall.filter(
+    ({ key }) => (trends.overall.get(key)?.points.length ?? 0) >= 2,
+  );
   const subjectProgress = trends.subjects.filter(({ trend }) => trend.points.length >= 2);
   return (
     <div className="space-y-6">
@@ -102,18 +104,18 @@ export default async function DashboardPage() {
               <div
                 className={`grid gap-x-8 gap-y-3 ${data.overall.length > 1 ? "sm:grid-cols-2" : ""} ${data.overall.length > 2 ? "xl:grid-cols-3" : ""}`}
               >
-                {data.overall.map(({ systemId, average }) => (
+                {data.overall.map(({ key, name, systemId, average }) => (
                   <div
-                    key={systemId}
+                    key={key}
                     className="flex min-w-0 flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-border/60 py-3"
                   >
                     <div className="min-w-0 flex-1 basis-36 space-y-1">
                       <p className="text-xs font-medium leading-relaxed">
-                        {t[gradingSystems[systemId].labelKey]}
+                        {name ?? t[gradingSystems[systemId].labelKey]}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {average.gradedCount
-                          ? `${t.gradedEntries}: ${format.format(average.gradedCount)}`
+                          ? `${average.basis === "PERIODS" ? t.finalGradeCount : t.gradedEntries}: ${format.format(average.gradedCount)}`
                           : t.noGradedEntries}
                       </p>
                     </div>
@@ -209,11 +211,13 @@ export default async function DashboardPage() {
                 </p>
               </div>
               <div className={`grid gap-4 ${overallProgress.length > 1 ? "lg:grid-cols-2" : ""}`}>
-                {overallProgress.map(({ systemId }) => (
-                  <section key={systemId} className="panel space-y-4 p-5">
-                    <h3 className="text-sm font-medium">{t[gradingSystems[systemId].labelKey]}</h3>
+                {overallProgress.map(({ key, name, systemId }) => (
+                  <section key={key} className="panel space-y-4 p-5">
+                    <h3 className="text-sm font-medium">
+                      {name ?? t[gradingSystems[systemId].labelKey]}
+                    </h3>
                     <TrendSummary
-                      trend={trends.overall.get(systemId) ?? gradeTrend(systemId, [])}
+                      trend={trends.overall.get(key) ?? gradeTrend(systemId, [])}
                       systemId={systemId}
                       locale={user.locale}
                       wide={overallProgress.length === 1}

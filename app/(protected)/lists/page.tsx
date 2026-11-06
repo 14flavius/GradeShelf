@@ -55,10 +55,10 @@ export default async function ListsPage() {
           <p className="text-sm text-muted-foreground">{t.noOverallLists}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {overall.map(({ systemId, average }) => (
-              <div key={systemId} className="space-y-2">
+            {overall.map(({ key, name, systemId, average }) => (
+              <div key={key} className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  {t[gradingSystems[systemId].labelKey]}
+                  {name ?? t[gradingSystems[systemId].labelKey]}
                 </p>
                 <AverageDisplay
                   average={average}
@@ -162,6 +162,7 @@ export default async function ListsPage() {
                           name: list.name,
                           description: list.description,
                           gradingSystemId: list.gradingSystemId,
+                          periodMode: list.periodMode,
                           locked: !!list.gradingSystemLockedAt,
                           preferences: {
                             showOnDashboard: list.visibleOnDashboard,

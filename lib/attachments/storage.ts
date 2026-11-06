@@ -5,12 +5,10 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { getStoragePaths } from "../storage-config.mjs";
 import { logEvent } from "../logger.mjs";
 import { AttachmentError } from "./errors.ts";
-import { absoluteMaxFileSize } from "./rules.ts";
-
-const storageNamePattern = /^[a-f0-9]{64}$/;
+import { absoluteMaxFileSize, storageNameSchema } from "./rules.ts";
 
 function storedPath(storageName: string) {
-  if (!storageNamePattern.test(storageName)) {
+  if (!storageNameSchema.safeParse(storageName).success) {
     throw new Error("INVALID_STORAGE_NAME");
   }
   return path.join(getStoragePaths().uploadsDir, storageName);

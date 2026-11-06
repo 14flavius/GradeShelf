@@ -77,7 +77,7 @@ async function buildFeed(db: PrismaClient, feed: Feed, baseURL: string, today: s
 }
 
 /** One bounded cache per database connection; concurrent readers share one build. */
-export function createCalendarFeedReader(db: PrismaClient) {
+function createCalendarFeedReader(db: PrismaClient) {
   const cache = new Map<string, Payload>();
   const builds = new Map<string, Promise<Payload>>();
   const requests = new Map<string, { count: number; reset: number }>();

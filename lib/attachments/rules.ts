@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const storageNameSchema = z.string().regex(/^[a-f0-9]{64}$/);
+
 // Bound memory use even when an operator increases upload limits.
 export const absoluteMaxFileSize = 100 * 1024 * 1024;
 export type AttachmentLimits = {

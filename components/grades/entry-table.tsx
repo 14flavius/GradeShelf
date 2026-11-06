@@ -1,5 +1,6 @@
 "use client";
 
+import { periodLabel } from "@/lib/grades/periods";
 import { AttachmentsPanel } from "@/components/attachments/panel";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/i18n/provider";
@@ -9,7 +10,7 @@ import type { EntryView, ListChoice, TypeChoice } from "@/lib/grades/types";
 import { useLocalDay } from "./use-local-day";
 import { DeleteButton } from "./delete-button";
 import { EntryEditor } from "./entry-editor";
-import { formatGrade } from "@/lib/grades/systems";
+import { formatGrade, gradingSystems, letterGrades } from "@/lib/grades/systems";
 import { EntryLink } from "./entry-link";
 import Link from "next/link";
 import { OpenIcon } from "@/components/ui/open-icon";
@@ -53,6 +54,7 @@ export function EntryTable({
   // A calendar date has no server timezone. Defer relative labels until the browser's day is known.
   const today = useLocalDay();
   const format = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+  const units = { PERCENT: "%", POINTS: t.pointsUnit, GRADE: t.gradeUnit };
   const labels = {
     ALL: t.allEntries,
     UPCOMING: t.upcoming,
@@ -161,9 +163,18 @@ export function EntryTable({
                   <span className="text-xl font-semibold tabular-nums">
                     {entry.grade === null
                       ? "—"
-                      : formatGrade(entry.grade, entry.gradeList.gradingSystemId, locale)}
+                      : formatGrade(
+                          entry.grade,
+                          entry.gradeList.gradingSystemId,
+                          locale,
+                          entry.gradeText,
+                        )}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">{t.gradeValue}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {letterGrades(entry.gradeList.gradingSystemId)
+                      ? t.gradeUnit
+                      : units[gradingSystems[entry.gradeList.gradingSystemId].unit]}
+                  </span>
                 </div>
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -192,6 +203,15 @@ export function EntryTable({
                       <span aria-hidden="true"> · </span>
                       {t.weight}: {format.format(entry.weight)}
                     </span>
+                    {entry.gradeList.periodMode !== "NONE" && (
+                      <span>
+                        ·{" "}
+                        {entry.subjectPeriod?.period.position
+                          ? periodLabel(entry.subjectPeriod.period.position, t)
+                          : t.unassignedPeriod}
+                      </span>
+                    )}
+                    {entry.group && <span>· {entry.group.name}</span>}
                     {status === "GRADED" && <span className="sr-only">{labels[status]}</span>}
                   </div>
                 </div>

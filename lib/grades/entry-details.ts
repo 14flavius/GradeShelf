@@ -3,11 +3,15 @@ import type { Auth } from "../auth/core.ts";
 import { readCurrentUser } from "../auth/access.ts";
 import { logEvent } from "../logger.mjs";
 import { z } from "zod";
+import { calculationEntrySelect } from "./calculation-data.ts";
 
 const entryId = z.string().min(1).max(128);
 
 function entrySelect(userId: string) {
   return {
+    ...calculationEntrySelect,
+    gradeText: true,
+    subjectPeriod: { select: { period: { select: { position: true } } } },
     id: true,
     gradeListId: true,
     subjectId: true,
@@ -18,7 +22,7 @@ function entrySelect(userId: string) {
     grade: true,
     weight: true,
     note: true,
-    gradeList: { select: { gradingSystemId: true } },
+    gradeList: { select: { gradingSystemId: true, periodMode: true } },
     attachments: {
       where: { userId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -37,7 +41,7 @@ export async function getEntryDetails(db: PrismaClient, userId: string, id: stri
     where: { id, userId },
     select: {
       ...entrySelect(userId),
-      gradeList: { select: { name: true, status: true, gradingSystemId: true } },
+      gradeList: { select: { name: true, status: true, gradingSystemId: true, periodMode: true } },
     },
   });
 }

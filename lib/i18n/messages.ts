@@ -1,4 +1,117 @@
 const en = {
+  setupCourseType: "Course type",
+  setupEnrollment: "Half-years taken",
+  setupAllSemesters: "All four",
+  setupEnrollmentInvalid: "Choose at least one half-year for each subject.",
+  setupCurrentPeriod: "Start in this half-year",
+  setupCurrentPeriodHelp: "We will open this half-year after setup. You can switch at any time.",
+  setupCommonWeighting: "Shared weighting",
+  setupCommonWeightingHelp:
+    "Applies to all subjects and all four half-years, except for your subject-specific rules. You can adjust individual half-years later.",
+  setupWeightingExceptions: "Different weighting for some subjects (optional)",
+  setupWeightingExceptionsHelp:
+    "Only select subjects with a different rule. Each exception applies to all four half-years of that subject.",
+  setupCustomWeighting: "Use a different rule",
+  setupWeightingInvalid:
+    "Enter a share for each selected grade type, totaling 100%. Check any subject exceptions as well.",
+  setupSemesterSubjectsHelp:
+    "Add your subjects and choose basic or advanced courses. All four half-years are selected initially; expand “Half-years taken” for exceptions.",
+  setupSemesterTypesHelp:
+    "Use your school’s actual assessment rules. Weight individual entries or assign fixed percentages to assessment types.",
+  setupWrittenExam: "Written exam",
+  setupOtherAssessment: "Oral / other assessment",
+  setupSemesterReady:
+    "Your subjects and assessment rules are ready. Record grades in the selected half-year; enter final grades when you receive them.",
+  setupGerman: "German",
+  setupBiology: "Biology",
+  setupChemistry: "Chemistry",
+  setupPhysics: "Physics",
+  setupHistory: "History",
+  setupGeography: "Geography",
+  setupPolitics: "Politics",
+  setupSport: "Physical education",
+  setupArt: "Art",
+  setupMusic: "Music",
+  setupFrench: "French",
+  setupSpanish: "Spanish",
+  setupReligion: "Religion",
+  setupEthics: "Ethics",
+  setupComputerScience: "Computer science",
+
+  typeAverage: "Average by assessment type",
+  targetCalculator: "What grade do I need?",
+  targetAverage: "Target average",
+  requiredGrade: "Needed on the next assessment (or better)",
+  targetHelp:
+    "Simulate one additional grade using the current weights and groups. For letter grades, enter the target as grade points. This does not predict a teacher’s final grade or save an entry.",
+  targetUnavailable:
+    "This target cannot be reached with one additional grade, or an input is invalid.",
+  finalGradeCount: "Recorded final grades",
+  belowFive: "Final grades below 5 points",
+  trendCumulativeHelp:
+    "The development uses all earlier entries and the current weights and groups. Editing the configuration recalculates the curve.",
+  trendCumulativeChart:
+    "Average of all earlier entries at each point, using the current weights and groups, ordered by exam date, then recording time. Better averages appear higher. The full grading scale is shown.",
+  trendCumulativeLegend: "Average development · better ↑",
+  scaleGermanExtended: "School grades with tendencies (0.7–6)",
+  listPreset: "Start with",
+  presetSchool: "School grades",
+  presetUpper: "Upper secondary",
+  presetOther: "Another grading system",
+  periodMode: "Periods",
+  periodNone: "No subdivision",
+  periodYear: "School year · two half-years",
+  periodSemesters: "Four separately assessed semesters",
+  periodModeHelp:
+    "A school year combines all entries. Separately assessed semesters use recorded final grades in the overall overview.",
+  periodChangeHelp:
+    "Existing entries remain unassigned when periods are added. Assign them to a half-year in the entry editor. Once periods have entries or settings, use a new list to change the period structure.",
+  wholeList: "Entire list",
+  halfYear: "Half-year",
+  allPeriods: "Overview",
+  unassignedPeriod: "Not assigned",
+  periodOverview: "Half-year overview",
+  periodSettings: "Assessment settings",
+  enrolled: "Subject taken in this half-year",
+  notEnrolled: "Not taken",
+  chooseEnrolledPeriod:
+    "Choose a half-year in which this subject is taken. You can change enrollment in the subject overview.",
+  weighting: "Weighting",
+  weightEntries: "Weight individual entries",
+  weightPercentages: "Fixed percentage shares",
+  weightingHelp:
+    "Individual weighting counts each grade with its weight. With fixed percentages, the average of each grade type counts with its assigned share. Subjects contribute equally to the list average when percentage weighting is used.",
+  percentageTotal: "Total",
+  percentageRequired:
+    "The shares must total exactly 100%. Every existing grade type must be assigned.",
+  calculationPreview: "After saving",
+  finalGrade: "Final grade received",
+  finalGradeHelp:
+    "Enter the grade you actually received. The calculated average is not automatically rounded to a final grade.",
+  currentAverage: "Current average",
+  entryAverage: "Entry average",
+  subjectAverage: "Subject average",
+  periodAverage: "Final-grade average",
+  incompleteAverage: "Provisional · results or assignments are missing",
+  advancedCourse: "Advanced course",
+  basicCourse: "Basic course",
+  additionalOptions: "More options",
+  gradeGroup: "Combined grade",
+  noGradeGroup: "Individual entry",
+  newGradeGroup: "Create a combined grade",
+  groupName: "Name of combined grade",
+  groupHelp:
+    "The entries in this group are averaged and together count as one performance. Individual weights still apply within the group.",
+  groupWeight: "Combined weight",
+  groupRemove: "Dissolve group",
+  groupRemoveHelp: "The entries will remain and count individually again.",
+  extendedGradeHelp:
+    "For example: 2.3, 2− or 1–2. This scale uses ±0.3 for tendencies and 0.5 for intermediate grades; 1+ counts as 0.7.",
+  extendGradeInput: "Allow decimals and tendencies",
+  periodYearWeights: "Weighting for the entire school year is configured under “Entire list”.",
+  groups: "Combined grades",
+  emptyFinalGrades: "No final grades recorded yet",
+
   advancedFeatures: "Advanced features",
   ssoTitle: "SSO login",
   ssoAdminHelp:
@@ -223,7 +336,7 @@ const en = {
   tutorialWelcomeHelp:
     "Build your grade list, add your subjects and decide how grades are weighted. We’ll guide you through it.",
   tutorialAdditive:
-    "Each completed run creates a new list and subjects. Selected grade types are reused; only your additions are created. Existing data stays as it is.",
+    "Your existing lists are kept. Selected grade types are reused in the new list.",
   tutorialDraftHint: "Nothing is saved until you confirm the final step.",
   tutorialBegin: "Let’s get started",
   tutorialLater: "Not now",
@@ -417,13 +530,8 @@ const en = {
   pdfReportHelp:
     "All lists, including archives, with subjects, grades, notes and attachment names. Original files and account settings are included in the ZIP export.",
   pdfAverageHelp:
-    "Weighted averages of graded entries only. The overall average uses selected active lists, separately for each grading system. Letter averages use their assigned points.",
+    "Averages follow each list’s weights and groups. Semester summaries use recorded final grades. Different scales and calculation methods stay separate. Letter averages use their assigned points.",
   pdfUngradedHelp: "A dash means no grade has been entered yet.",
-  createListChoice: "How would you like to start?",
-  createListManual: "Create manually",
-  createListManualHelp: "Start with an empty list. Add subjects later.",
-  createListGuided: "Create with tutorial",
-  createListGuidedHelp: "Set up your list, subjects and grade types together.",
   loadMore: "Load 5 more",
   loadingMore: "Loading…",
   entriesShown: "{shown} of {total} entries",
@@ -516,6 +624,8 @@ const en = {
     "Create a subject in this list and a grade type in Settings before adding an entry.",
   emptyLists: "No grade lists yet. Create your first list to get started.",
   emptySubjects: "No subjects yet. Add a subject to this list.",
+  noEnrolledSubjects:
+    "No subjects taken in this half-year. Choose another half-year or adjust the subjects in the overview.",
   emptyTypes: "No grade types yet. Add one with its default weight.",
   emptyEntries: "No entries yet. Add a grade or plan an exam.",
   status: "Status",
@@ -653,6 +763,121 @@ type Messages = typeof en;
 export type MessageKey = keyof Messages;
 
 const de: Messages = {
+  setupCourseType: "Kursart",
+  setupEnrollment: "Belegte Halbjahre",
+  setupAllSemesters: "Alle vier",
+  setupEnrollmentInvalid: "Wähle für jedes Fach mindestens ein Halbjahr aus.",
+  setupCurrentPeriod: "In diesem Halbjahr starten",
+  setupCurrentPeriodHelp:
+    "Dieses Halbjahr öffnet sich nach der Einrichtung. Du kannst jederzeit wechseln.",
+  setupCommonWeighting: "Gemeinsame Gewichtung",
+  setupCommonWeightingHelp:
+    "Gilt für alle Fächer und alle vier Halbjahre, außer bei deinen Ausnahmen je Fach. Einzelne Halbjahre kannst du später anpassen.",
+  setupWeightingExceptions: "Abweichende Gewichtung je Fach (optional)",
+  setupWeightingExceptionsHelp:
+    "Wähle nur Fächer aus, für die eine andere Regel gilt. Jede Ausnahme gilt für alle vier Halbjahre dieses Fachs.",
+  setupCustomWeighting: "Eigene Gewichtung",
+  setupWeightingInvalid:
+    "Gib für jede gewählte Notenart einen Anteil an; zusammen müssen es 100 % sein. Prüfe auch deine Ausnahmen je Fach.",
+  setupSemesterSubjectsHelp:
+    "Wähle deine Fächer und ihre Kursart. Zunächst sind alle vier Halbjahre belegt; Ausnahmen stellst du unter „Belegte Halbjahre“ ein.",
+  setupSemesterTypesHelp:
+    "Übernimm die tatsächliche Regelung deiner Schule: Gewichte einzelne Einträge oder lege feste Prozentanteile für die Notenarten fest.",
+  setupWrittenExam: "Klausur",
+  setupOtherAssessment: "Mündlich / sonstige Leistungen",
+  setupSemesterReady:
+    "Deine Fächer und Bewertungsregeln sind eingerichtet. Trage Noten im gewählten Halbjahr ein; die erhaltenen Halbjahresnoten ergänzt du später.",
+  setupGerman: "Deutsch",
+  setupBiology: "Biologie",
+  setupChemistry: "Chemie",
+  setupPhysics: "Physik",
+  setupHistory: "Geschichte",
+  setupGeography: "Geografie",
+  setupPolitics: "Gemeinschaftskunde",
+  setupSport: "Sport",
+  setupArt: "Kunst",
+  setupMusic: "Musik",
+  setupFrench: "Französisch",
+  setupSpanish: "Spanisch",
+  setupReligion: "Religion",
+  setupEthics: "Ethik",
+  setupComputerScience: "Informatik",
+
+  typeAverage: "Schnitt nach Notenarten",
+  targetCalculator: "Welche Note brauche ich?",
+  targetAverage: "Gewünschter Schnitt",
+  requiredGrade: "Bei der nächsten Bewertung nötig (oder besser)",
+  targetHelp:
+    "Simuliert eine weitere Note mit den aktuellen Gewichtungen und Sammelnoten. Bei Buchstabennoten den Zielschnitt als Notenpunkte eingeben. Das sagt keine Zeugnisnote voraus und speichert keinen Eintrag.",
+  targetUnavailable:
+    "Das Ziel ist mit einer weiteren Note nicht erreichbar oder eine Eingabe ist ungültig.",
+  finalGradeCount: "Eingetragene Endnoten",
+  belowFive: "Endnoten unter 5 Punkten",
+  trendCumulativeHelp:
+    "Der Verlauf berücksichtigt alle früheren Einträge sowie die aktuellen Gewichtungen und Sammelnoten. Änderungen der Einstellungen berechnen die Kurve neu.",
+  trendCumulativeChart:
+    "Schnitt aller vorherigen Einträge je Punkt mit den aktuellen Gewichtungen und Sammelnoten, nach Prüfungsdatum und dann Benotungszeitpunkt sortiert. Bessere Schnitte stehen höher. Die vollständige Notenskala wird angezeigt.",
+  trendCumulativeLegend: "Entwicklung des Schnitts · besser ↑",
+  scaleGermanExtended: "Schulnoten mit Zwischen- und Tendenznoten (0,7–6)",
+  listPreset: "Vorlage",
+  presetSchool: "Schulnoten",
+  presetUpper: "Oberstufe",
+  presetOther: "Anderes Notensystem",
+  periodMode: "Zeiträume",
+  periodNone: "Ohne Unterteilung",
+  periodYear: "Schuljahr · zwei Halbjahre",
+  periodSemesters: "Vier getrennt bewertete Kurshalbjahre",
+  periodModeHelp:
+    "Beim Schuljahr zählen alle Einträge für das ganze Jahr. Getrennte Kurshalbjahre verwenden eingetragene Halbjahresnoten für die Gesamtübersicht.",
+  periodChangeHelp:
+    "Beim Ergänzen von Halbjahren bleiben vorhandene Einträge zunächst ohne Zuordnung. Ordne sie im Eintragsformular zu. Sobald Halbjahre Einträge oder Einstellungen haben, verwende für eine andere Halbjahresstruktur eine neue Liste.",
+  wholeList: "Gesamte Liste",
+  halfYear: "Halbjahr",
+  allPeriods: "Übersicht",
+  unassignedPeriod: "Nicht zugeordnet",
+  periodOverview: "Halbjahresübersicht",
+  periodSettings: "Bewertung einstellen",
+  enrolled: "Fach in diesem Halbjahr belegt",
+  notEnrolled: "Nicht belegt",
+  chooseEnrolledPeriod:
+    "Wähle ein Halbjahr, in dem dieses Fach belegt ist. Die Belegung kannst du in der Fachübersicht ändern.",
+  weighting: "Gewichtung",
+  weightEntries: "Einzelne Noten gewichten",
+  weightPercentages: "Feste Prozentanteile",
+  weightingHelp:
+    "Einzelgewichte bestimmen, wie stark eine Note zählt. Bei Prozentanteilen wird zuerst jede Notenart gemittelt und dann mit ihrem Anteil verrechnet. Bei Listen mit Prozentanteilen zählt jedes Fach im Listenschnitt gleich.",
+  percentageTotal: "Summe",
+  percentageRequired:
+    "Die Anteile müssen genau 100 % ergeben. Jede verwendete Notenart muss zugeordnet sein.",
+  calculationPreview: "Nach dem Speichern",
+  finalGrade: "Erhaltene Endnote",
+  finalGradeHelp:
+    "Trage die tatsächlich erhaltene Endnote ein. Der berechnete Schnitt wird nicht automatisch zur Endnote gerundet.",
+  currentAverage: "Aktueller Schnitt",
+  entryAverage: "Schnitt aller Einträge",
+  subjectAverage: "Fächerschnitt",
+  periodAverage: "Schnitt der Endnoten",
+  incompleteAverage: "Vorläufig · Ergebnisse oder Zuordnungen fehlen",
+  advancedCourse: "Leistungsfach",
+  basicCourse: "Basisfach",
+  additionalOptions: "Weitere Optionen",
+  gradeGroup: "Sammelnote",
+  noGradeGroup: "Einzelne Leistung",
+  newGradeGroup: "Sammelnote anlegen",
+  groupName: "Name der Sammelnote",
+  groupHelp:
+    "Die Einträge dieser Gruppe werden gemittelt und zählen zusammen als eine Leistung. Einzelgewichte gelten weiterhin innerhalb der Gruppe.",
+  groupWeight: "Gewicht der Sammelnote",
+  groupRemove: "Sammelnote auflösen",
+  groupRemoveHelp: "Die Einträge bleiben erhalten und zählen wieder einzeln.",
+  extendedGradeHelp:
+    "Zum Beispiel: 2,3, 2− oder 1–2. Diese Skala verwendet ±0,3 für Tendenzen und 0,5 für Zwischennoten; 1+ zählt als 0,7.",
+  extendGradeInput: "Dezimal- und Tendenznoten erlauben",
+  periodYearWeights:
+    "Die Gewichtung für das ganze Schuljahr wird unter „Gesamte Liste“ eingestellt.",
+  groups: "Sammelnoten",
+  emptyFinalGrades: "Noch keine Endnoten eingetragen",
+
   advancedFeatures: "Erweiterte Funktionen",
   ssoTitle: "SSO-Login",
   ssoAdminHelp:
@@ -887,7 +1112,7 @@ const de: Messages = {
   tutorialWelcomeHelp:
     "Lege deine Notenliste an, ergänze Fächer und bestimme die Gewichtung deiner Noten. Wir führen dich durch die Einrichtung.",
   tutorialAdditive:
-    "Jeder Durchlauf erstellt eine neue Liste und Fächer. Gewählte Notenarten werden wiederverwendet; nur deine Ergänzungen werden neu angelegt. Bestehende Daten bleiben erhalten.",
+    "Deine bisherigen Listen bleiben erhalten. Gewählte Notenarten werden in der neuen Liste wiederverwendet.",
   tutorialDraftHint: "Gespeichert wird erst, wenn du im letzten Schritt bestätigst.",
   tutorialBegin: "Los geht’s",
   tutorialLater: "Später",
@@ -1094,13 +1319,8 @@ const de: Messages = {
   pdfReportHelp:
     "Alle Listen einschließlich Archiv mit Fächern, Noten, Notizen und Anhangsnamen. Originaldateien und Kontoeinstellungen sind im ZIP-Export enthalten.",
   pdfAverageHelp:
-    "Gewichtete Schnitte nur aus benoteten Einträgen. Der Gesamtschnitt berücksichtigt ausgewählte aktive Listen, getrennt je Notensystem. Buchstabenschnitte verwenden die zugeordneten Punkte.",
+    "Schnitte folgen den Gewichtungen und Sammelnoten der Liste. Halbjahresübersichten verwenden eingetragene Endnoten. Unterschiedliche Skalen und Berechnungsarten bleiben getrennt. Buchstabenschnitte verwenden die zugeordneten Punkte.",
   pdfUngradedHelp: "Ein Strich bedeutet, dass noch keine Note eingetragen wurde.",
-  createListChoice: "Wie möchtest du starten?",
-  createListManual: "Manuell anlegen",
-  createListManualHelp: "Mit einer leeren Liste starten. Fächer später ergänzen.",
-  createListGuided: "Mit Tutorial erstellen",
-  createListGuidedHelp: "Liste, Fächer und Notenarten gemeinsam einrichten.",
   loadMore: "5 weitere laden",
   loadingMore: "Wird geladen…",
   entriesShown: "{shown} von {total} Einträgen",
@@ -1194,6 +1414,8 @@ const de: Messages = {
     "Lege zuerst ein Fach in dieser Liste und eine Notenart in den Einstellungen an.",
   emptyLists: "Noch keine Notenlisten. Lege deine erste Liste an.",
   emptySubjects: "Noch keine Fächer. Füge dieser Liste ein Fach hinzu.",
+  noEnrolledSubjects:
+    "In diesem Halbjahr sind keine Fächer belegt. Wähle ein anderes Halbjahr oder passe die Fächer in der Übersicht an.",
   emptyTypes: "Noch keine Notenarten. Lege eine mit ihrem Standardgewicht an.",
   emptyEntries: "Noch keine Einträge. Trage eine Note ein oder plane eine Prüfung.",
   status: "Status",
