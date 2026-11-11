@@ -41,6 +41,9 @@ updates:
       # The plugins bundled with eslint-config-next support ESLint up to 9.
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      # Node types follow the supported runtime (engines.node), not the newest release.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
