@@ -286,6 +286,6 @@ with `npm run db:deploy`; never reset them.
   <a href="https://gradeshelf.de">Visit the website</a>
 </p>
 <p align="center">
-  By <a href="https://flavius-hager.de">Flavius Hager</a><br>
+  By <a href="https://flavius-hager.de">Flavius Hager</a> &nbsp;·&nbsp; <a href="LICENSE">MIT License</a><br>
   <sub>Most of the original GradeShelf foundation was vibe-coded with AI assistance.</sub>
 </p>
