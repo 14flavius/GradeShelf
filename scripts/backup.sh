@@ -2,7 +2,7 @@
 set -eu
 umask 077
 
-cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
 if [ ! -f .env ]; then
   printf '%s\n' 'Missing .env; backup stopped.' >&2

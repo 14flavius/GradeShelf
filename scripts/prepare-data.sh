@@ -2,7 +2,7 @@
 set -eu
 umask 077
 
-cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
 fail() {
   printf '%s\n' "$1" >&2

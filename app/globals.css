@@ -143,6 +143,9 @@
     min-height: 1.5rem;
     text-align: left;
   }
+  /* WebKit-internal pseudo-element for Safari's date field; the IDE's
+     "Invalid pseudo-selector" inspection does not know it. */
+  /* noinspection CssInvalidPseudoSelector */
   .grade-input[type="date"]::-webkit-datetime-edit {
     padding: 0;
   }

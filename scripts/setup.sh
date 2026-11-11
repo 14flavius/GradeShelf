@@ -2,7 +2,7 @@
 set -eu
 umask 077
 
-cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
 if [ -e .env ] || [ -L .env ]; then
   printf '%s\n' 'Existing .env preserved. Check BETTER_AUTH_URL before starting.'

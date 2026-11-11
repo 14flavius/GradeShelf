@@ -3,19 +3,19 @@
   <desc id="description">A self-hosted grade tracker and exam planner. Grades, exams and notes, all on your server.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1120" y2="300" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#101827"/>
+      <stop offset="0" stop-color="#101827"/>
       <stop offset="1" stop-color="#162A50"/>
     </linearGradient>
     <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(934 145) rotate(90) scale(245 340)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3764FF" stop-opacity=".36"/>
+      <stop offset="0" stop-color="#3764FF" stop-opacity=".36"/>
       <stop offset="1" stop-color="#3764FF" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="paper" x1="884" y1="58" x2="1006" y2="240" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
+      <stop offset="0" stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#CBDCFF"/>
     </linearGradient>
     <linearGradient id="shelf" x1="795" y1="235" x2="1027" y2="257" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B6CCFF"/>
+      <stop offset="0" stop-color="#B6CCFF"/>
       <stop offset=".5" stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#D5E2FF"/>
     </linearGradient>
@@ -32,7 +32,7 @@
     <circle cx="942" cy="150" r="149" stroke="#A5BDFF" stroke-opacity=".08"/>
     <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
       <text x="60" y="62" fill="#A7BEF4" font-size="13" font-weight="600" letter-spacing="2.5">SELF-HOSTED GRADE TRACKER</text>
-      <text x="56" y="156" fill="#FFFFFF" font-size="80" font-weight="750" letter-spacing="-3">GradeShelf</text>
+      <text x="56" y="156" fill="#FFFFFF" font-size="80" font-weight="900" letter-spacing="-3">GradeShelf</text>
       <text x="60" y="201" fill="#C1CEEA" font-size="22">Grades, exams and notes. All on your server.</text>
       <g fill="#8FA9DC" font-size="13" font-weight="500">
         <text x="60" y="257">Docker</text>
