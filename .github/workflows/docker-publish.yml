@@ -19,6 +19,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # Sign and store the provenance attestation for the published image.
+      id-token: write
+      attestations: write
     steps:
       - name: Check out release
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -122,6 +125,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish image
+        id: publish
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
@@ -132,3 +136,14 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.release.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
+
+      # Links the image digest to this commit and workflow run.
+      # Verify with: gh attestation verify oci://<image> --repo <owner>/<repo>
+      - name: Attest image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.release.outputs.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+          # Storage records exist only for organization-owned repositories.
+          create-storage-record: false
