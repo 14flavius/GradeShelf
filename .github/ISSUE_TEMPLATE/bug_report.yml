@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in GradeShelf does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove secrets, the contents of `.env` and personal information such as names,
+        grades or calendar links before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: GradeShelf version
+      description: Shown by `docker compose images`, or the version you pinned in `GRADESHELF_IMAGE`.
+      placeholder: "1.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Installation
+      options:
+        - Docker Compose (installer)
+        - Docker Compose (customized)
+        - Development checkout
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `docker compose logs --tail=100`, if relevant.
+      render: text
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      description: Only needed for display or interaction problems.
+      placeholder: Safari 26 on iPhone
+  - type: input
+    id: proxy
+    attributes:
+      label: Reverse proxy
+      description: Only needed for login, redirect or connection problems.
+      placeholder: Caddy, nginx, Traefik, none
