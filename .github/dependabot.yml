@@ -29,6 +29,18 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      # Everything else: one pull request per week for small updates.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # The Prisma SQLite adapter requires better-sqlite3 ^12.
+      - dependency-name: "better-sqlite3"
+        update-types: ["version-update:semver-major"]
+      # The plugins bundled with eslint-config-next support ESLint up to 9.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
