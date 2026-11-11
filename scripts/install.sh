@@ -3,7 +3,7 @@ set -eu
 umask 077
 
 # Download this script as install.sh into the directory that will hold the instance.
-cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 
 fail() {
   printf '%s\n' "$1" >&2
@@ -136,7 +136,18 @@ esac
 temporary=$(mktemp -d .gradeshelf-install.XXXXXX)
 trap 'rm -rf "$temporary"' EXIT
 trap 'exit 1' HUP INT TERM
-source_url=https://raw.githubusercontent.com/14flavius/GradeShelf/main
+repository_url=https://github.com/14flavius/GradeShelf
+# Configuration and scripts come from the latest release so they match the published
+# image; main may already contain changes for a version that is not released yet.
+release_url=$(curl --silent --show-error --proto '=https' --connect-timeout 15 --max-time 60 \
+  --output /dev/null --write-out '%{redirect_url}' "$repository_url/releases/latest") ||
+  fail 'Could not reach GitHub to find the latest release. No configuration was created.'
+release_tag=${release_url##*/}
+if ! printf '%s\n' "$release_tag" | LC_ALL=C grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' ||
+  [ "$release_url" != "$repository_url/releases/tag/$release_tag" ]; then
+  fail 'Could not determine the latest release. No configuration was created.'
+fi
+source_url=https://raw.githubusercontent.com/14flavius/GradeShelf/$release_tag
 download() {
   curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
     --connect-timeout 15 --max-time 120 "$source_url/$1" -o "$2"
