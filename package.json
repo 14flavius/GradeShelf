@@ -8,7 +8,7 @@
   "homepage": "https://gradeshelf.de",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/14flavius/GradeShelf.git"
+    "url": "https://github.gradeshelf.de"
   },
   "license": "MIT",
   "private": true,
