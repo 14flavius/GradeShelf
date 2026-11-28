@@ -51,7 +51,10 @@ export function createAuth(db: PrismaClient, sso?: SsoConfiguration) {
       maxPasswordLength: 128,
     },
     session: {
-      expiresIn: 60 * 60 * 24 * 7,
+      // Active sessions are extended at most daily (updateAge), so users stay
+      // signed in unless they do not open GradeShelf for 14 days.
+      expiresIn: 60 * 60 * 24 * 14,
+      updateAge: 60 * 60 * 24,
       cookieCache: { enabled: false },
       additionalFields: {
         ssoAccountId: { type: "string", required: false, input: false },

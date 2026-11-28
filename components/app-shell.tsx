@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { getCurrentUser } from "@/lib/auth/server";
 import { AppNavigation } from "@/components/app-navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { SessionRefresh } from "@/components/auth/session-refresh";
 import { BrandIcon } from "@/components/brand-icon";
 import { RefreshButton } from "@/components/refresh-button";
 import { getDb } from "@/lib/db";
@@ -24,6 +25,7 @@ export async function AppShell({
   const usedBytes = await attachmentUsage(await getDb(), user.id);
   return (
     <AttachmentStorageProvider limits={getAttachmentLimits()} usedBytes={usedBytes}>
+      <SessionRefresh />
       <div className="flex-1">
         <a
           href={`#${mainContentId}`}
