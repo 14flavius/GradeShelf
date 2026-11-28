@@ -149,6 +149,9 @@ export function createAuth(db: PrismaClient, sso?: SsoConfiguration) {
       // No trusted proxy is configured: never accept spoofable forwarding headers.
       // Better Auth uses its shared per-path bucket when no trusted IP is available.
       ipAddress: { ipAddressHeaders: [] },
+      // Cookies are shared across ports on the same host. Another Better Auth app
+      // there would otherwise overwrite this session cookie and sign users out.
+      cookiePrefix: "gradeshelf",
       useSecureCookies: environment.baseURL.startsWith("https:"),
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
     },
